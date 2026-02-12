@@ -105,8 +105,13 @@ export const listZoomMeetings = async (): Promise<ZoomMeetingRaw[]> => {
 
   const base = getApiBase();
   const response = await fetch(`${base}/api/zoom/list?type=scheduled`);
-  if (!response.ok) return [];
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    console.warn('Zoom list API failed:', response.status, err);
+    return [];
+  }
 
   const data = await response.json();
-  return data.meetings || [];
+  const list = data.meetings || [];
+  return list;
 };

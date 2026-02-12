@@ -33,8 +33,12 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    refreshMeetings();
-    syncMeetingsFromZoom().then(setMeetings).catch(() => {});
+    syncMeetingsFromZoom()
+      .then(setMeetings)
+      .catch((e) => {
+        console.warn('Zoom sync failed, loading from storage:', e);
+        refreshMeetings();
+      });
   }, []);
 
   const handleSyncFromZoom = async () => {
@@ -44,8 +48,17 @@ const App: React.FC = () => {
       setMeetings(synced);
     } catch (e) {
       console.error('Sync failed:', e);
+      await refreshMeetings(); // Fallback to storage on sync failure
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  // Sync when entering Schedule view (pull latest from Zoom)
+  const handleViewChange = (v: ViewState) => {
+    setView(v);
+    if (v === ViewState.SCHEDULE) {
+      syncMeetingsFromZoom().then(setMeetings).catch(() => refreshMeetings());
     }
   };
 
@@ -128,7 +141,7 @@ const App: React.FC = () => {
       }
 
       await refreshMeetings();
-      setView(ViewState.SCHEDULE); // Redirect to schedule
+      handleViewChange(ViewState.SCHEDULE); // Redirect to schedule (triggers sync)
     } catch (error) {
       console.error('Error creating/updating meeting:', error);
       alert('Failed to create/update meeting. Please try again.');
@@ -139,7 +152,7 @@ const App: React.FC = () => {
 
   const handleEdit = (id: string) => {
     setEditingMeetingId(id);
-    setView(ViewState.BOOKING);
+    handleViewChange(ViewState.BOOKING);
   };
 
   const handleDelete = async (id: string) => {
@@ -172,7 +185,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col font-sans text-gray-800 bg-gray-50">
-      <Header currentView={view} onChangeView={setView} />
+      <Header currentView={view} onChangeView={handleViewChange} />
 
       <main className="flex-grow pb-12">
         {view === ViewState.DASHBOARD && (
@@ -214,7 +227,7 @@ const App: React.FC = () => {
               <div className="mb-8">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-bold text-gray-800">Next Up</h2>
-                  <button onClick={() => setView(ViewState.SCHEDULE)} className="text-jci-blue hover:underline text-sm font-medium">View Full Schedule &rarr;</button>
+                  <button onClick={() => handleViewChange(ViewState.SCHEDULE)} className="text-jci-blue hover:underline text-sm font-medium">View Full Schedule &rarr;</button>
                 </div>
                 {upcomingMeetings.length > 0 ? (
                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
