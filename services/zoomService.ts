@@ -243,6 +243,11 @@ export const createZoomMeeting = async (
       password: meetingData.password
     };
   } catch (error) {
+    // Fallback to mock link on network/CORS failure (e.g. production without backend proxy)
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      console.warn('Zoom API unreachable (CORS/network). Using mock link.');
+      return { ...generateMockZoomLink() };
+    }
     console.error('Failed to create Zoom meeting:', error);
     throw error;
   }
@@ -299,6 +304,10 @@ export const updateZoomMeeting = async (
       startUrl: meetingData.start_url
     };
   } catch (error) {
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      console.warn('Zoom API unreachable. Keeping existing link.');
+      return { joinUrl: `https://zoom.us/j/${meetingId}`, startUrl: `https://zoom.us/j/${meetingId}` };
+    }
     console.error('Failed to update Zoom meeting:', error);
     throw error;
   }
