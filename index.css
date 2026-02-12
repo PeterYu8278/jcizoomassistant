@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --color-jci-blue: #0097D7;
+  --color-jci-navy: #1C3F94;
+  --color-jci-teal: #2A9D8F;
+}
+
+body {
+  background-color: #f3f4f6;
+}
