@@ -2,16 +2,17 @@
 
 ## Overview
 
-Zoom meetings are created via **Netlify serverless functions** (backend proxy). Credentials stay on the server and are never exposed to the frontend.
+Zoom meetings are created via **Netlify serverless functions** (backend proxy). Credentials stay on the server and are never exposed to the frontend. Uses **Server-to-Server OAuth** (JWT apps are deprecated by Zoom).
 
 ## Setup
 
-### 1. Create Zoom JWT App
+### 1. Create Zoom Server-to-Server OAuth App
 
 1. Go to [Zoom Marketplace](https://marketplace.zoom.us/)
-2. Click **Develop** → **Build App** → **JWT** (or Server-to-Server OAuth)
+2. Click **Develop** → **Build App** → **Server-to-Server OAuth**
 3. Add scopes: `meeting:write`, `meeting:read`, `meeting:delete`
-4. Copy **API Key** and **API Secret**
+4. Activate the app
+5. Copy **Account ID**, **Client ID**, and **Client Secret**
 
 ### 2. Configure Netlify Environment Variables
 
@@ -19,8 +20,9 @@ In **Netlify Dashboard** → **Site** → **Environment variables**, add:
 
 | Variable | Value | Scopes |
 |----------|-------|--------|
-| `VITE_ZOOM_API_KEY` | Your Zoom API Key | All |
-| `VITE_ZOOM_API_SECRET` | Your Zoom API Secret | All |
+| `VITE_ZOOM_ACCOUNT_ID` | Your Zoom Account ID | All |
+| `VITE_ZOOM_CLIENT_ID` | Your Zoom Client ID | All |
+| `VITE_ZOOM_CLIENT_SECRET` | Your Zoom Client Secret | All |
 | `VITE_USE_ZOOM_API` | `true` | All |
 
 ### 3. Local Development

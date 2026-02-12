@@ -9,6 +9,26 @@ interface CreateMeetingBody {
   password?: string;
 }
 
+const getEnv = (k: string) => process.env[k] ?? (globalThis as any).Netlify?.env?.get?.(k);
+
+const getZoomTokenS2S = async (accountId: string, clientId: string, clientSecret: string): Promise<string> => {
+  const creds = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+  const res = await fetch("https://zoom.us/oauth/token", {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${creds}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({ grant_type: "account_credentials", account_id: accountId }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error_description || err.error || "Failed to get Zoom token");
+  }
+  const data = await res.json();
+  return data.access_token;
+};
+
 const generateZoomJWT = (apiKey: string, apiSecret: string): string => {
   const header = { alg: "HS256", typ: "JWT" };
   const now = Math.floor(Date.now() / 1000);
@@ -42,13 +62,23 @@ export default async (req: Request, _context: Context) => {
     });
   }
 
-  const apiKey = process.env.VITE_ZOOM_API_KEY || Netlify?.env?.get?.("VITE_ZOOM_API_KEY");
-  const apiSecret = process.env.VITE_ZOOM_API_SECRET || Netlify?.env?.get?.("VITE_ZOOM_API_SECRET");
-  if (!apiKey || !apiSecret) {
-    return new Response(
-      JSON.stringify({ error: "Zoom API not configured. Set VITE_ZOOM_API_KEY and VITE_ZOOM_API_SECRET in Netlify env." }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+  let token: string;
+  try {
+    const accountId = getEnv("VITE_ZOOM_ACCOUNT_ID");
+    const clientId = getEnv("VITE_ZOOM_CLIENT_ID") || getEnv("VITE_ZOOM_API_KEY");
+    const clientSecret = getEnv("VITE_ZOOM_CLIENT_SECRET") || getEnv("VITE_ZOOM_API_SECRET");
+    if (accountId && clientId && clientSecret) {
+      token = await getZoomTokenS2S(accountId, clientId, clientSecret);
+    } else if (clientId && clientSecret) {
+      token = generateZoomJWT(clientId, clientSecret);
+    } else {
+      throw new Error("Set VITE_ZOOM_ACCOUNT_ID, VITE_ZOOM_CLIENT_ID, VITE_ZOOM_CLIENT_SECRET (S2S OAuth) in Netlify env.");
+    }
+  } catch (e: any) {
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   let body: CreateMeetingBody;
@@ -69,7 +99,6 @@ export default async (req: Request, _context: Context) => {
     );
   }
 
-  const token = generateZoomJWT(apiKey, apiSecret);
   const zoomStartTime = new Date(startTime).toISOString();
 
   const meetingRequest = {

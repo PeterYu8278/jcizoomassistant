@@ -8,6 +8,33 @@ interface UpdateMeetingBody {
   agenda?: string;
 }
 
+const getEnv = (k: string) => process.env[k] ?? (globalThis as any).Netlify?.env?.get?.(k);
+
+const getZoomTokenS2S = async (
+  accountId: string,
+  clientId: string,
+  clientSecret: string
+): Promise<string> => {
+  const creds = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+  const res = await fetch("https://zoom.us/oauth/token", {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${creds}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      grant_type: "account_credentials",
+      account_id: accountId,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error_description || err.error || "Failed to get Zoom token");
+  }
+  const data = await res.json();
+  return data.access_token;
+};
+
 const generateZoomJWT = (apiKey: string, apiSecret: string): string => {
   const header = { alg: "HS256", typ: "JWT" };
   const now = Math.floor(Date.now() / 1000);
@@ -33,16 +60,21 @@ const generateZoomJWT = (apiKey: string, apiSecret: string): string => {
   return `${encodedHeader}.${encodedPayload}.${signature}`;
 };
 
-export default async (req: Request, context: Context) => {
-  const apiKey = process.env.VITE_ZOOM_API_KEY || Netlify?.env?.get?.("VITE_ZOOM_API_KEY");
-  const apiSecret = process.env.VITE_ZOOM_API_SECRET || Netlify?.env?.get?.("VITE_ZOOM_API_SECRET");
-  if (!apiKey || !apiSecret) {
-    return new Response(
-      JSON.stringify({ error: "Zoom API not configured" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
-  }
+const getZoomToken = async (): Promise<string> => {
+  const accountId = getEnv("VITE_ZOOM_ACCOUNT_ID");
+  const clientId = getEnv("VITE_ZOOM_CLIENT_ID") || getEnv("VITE_ZOOM_API_KEY");
+  const clientSecret = getEnv("VITE_ZOOM_CLIENT_SECRET") || getEnv("VITE_ZOOM_API_SECRET");
 
+  if (accountId && clientId && clientSecret) {
+    return getZoomTokenS2S(accountId, clientId, clientSecret);
+  }
+  if (clientId && clientSecret) {
+    return generateZoomJWT(clientId, clientSecret);
+  }
+  throw new Error("Zoom API not configured");
+};
+
+export default async (req: Request, context: Context) => {
   const meetingId = context.params?.id;
   if (!meetingId) {
     return new Response(JSON.stringify({ error: "Missing meeting ID" }), {
@@ -51,7 +83,15 @@ export default async (req: Request, context: Context) => {
     });
   }
 
-  const token = generateZoomJWT(apiKey, apiSecret);
+  let token: string;
+  try {
+    token = await getZoomToken();
+  } catch (e: any) {
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   if (req.method === "PATCH") {
     let body: UpdateMeetingBody;
