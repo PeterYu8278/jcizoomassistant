@@ -168,6 +168,15 @@ const generateZoomJWT = async (): Promise<string> => {
  * @param meetingData - Meeting details
  * @returns Promise with meeting information including join URL
  */
+/**
+ * Generate a mock Zoom link for demo mode when API is not configured
+ */
+const generateMockZoomLink = (): { joinUrl: string; startUrl: string; meetingId: string } => {
+  const id = Math.random().toString(36).slice(2, 11);
+  const joinUrl = `https://zoom.us/j/${id}`;
+  return { joinUrl, startUrl: joinUrl, meetingId: id };
+};
+
 export const createZoomMeeting = async (
   topic: string,
   startTime: string, // YYYY-MM-DDTHH:mm:ss format
@@ -175,8 +184,9 @@ export const createZoomMeeting = async (
   agenda?: string,
   password?: string
 ): Promise<{ joinUrl: string; startUrl: string; meetingId: string; password?: string }> => {
+  // Fallback to mock link when Zoom API is not configured (e.g. deployed without env vars)
   if (!USE_ZOOM_API || !ZOOM_API_KEY || !ZOOM_API_SECRET) {
-    throw new Error('Zoom API is not configured. Set VITE_USE_ZOOM_API=true and add your Zoom credentials in .env.local');
+    return { ...generateMockZoomLink() };
   }
 
   try {
@@ -251,9 +261,10 @@ export const updateZoomMeeting = async (
   durationMinutes: number,
   agenda?: string
 ): Promise<{ joinUrl: string; startUrl: string }> => {
+  // Return mock link when Zoom API not configured (meeting may have been created in demo mode)
   if (!USE_ZOOM_API || !ZOOM_API_KEY || !ZOOM_API_SECRET) {
-    console.warn('Zoom API not configured, returning existing meeting link');
-    throw new Error('Zoom API not configured');
+    const joinUrl = `https://zoom.us/j/${meetingId}`;
+    return { joinUrl, startUrl: joinUrl };
   }
 
   try {
