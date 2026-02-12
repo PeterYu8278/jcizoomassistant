@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import CalendarView from './components/CalendarView';
+import ListView from './components/ListView';
 import BookingForm from './components/BookingForm';
 import MeetingCard from './components/MeetingCard';
 import { ViewState, Meeting, BookingFormData } from './types';
 import { loadMeetings, saveMeeting, updateMeeting, deleteMeeting, syncMeetingsFromZoom } from './services/storageService';
 import { createZoomMeeting, updateZoomMeeting, deleteZoomMeeting as deleteZoomMeetingAPI } from './services/zoomService';
-import { Users, Video, CalendarCheck, RefreshCw } from 'lucide-react';
+import { Users, Video, CalendarCheck, RefreshCw, Calendar, List } from 'lucide-react';
 
 // A visual separator / banner
 const HeroBanner = () => (
@@ -24,6 +25,7 @@ const App: React.FC = () => {
   const [editingMeetingId, setEditingMeetingId] = useState<string | null>(null);
   const [isCreatingMeeting, setIsCreatingMeeting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [scheduleView, setScheduleView] = useState<'calendar' | 'list'>('calendar');
 
   const refreshMeetings = async () => {
     const m = await loadMeetings();
@@ -248,9 +250,29 @@ const App: React.FC = () => {
 
         {view === ViewState.SCHEDULE && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-             <div className="flex justify-between items-center mb-6">
+             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h1 className="text-2xl font-bold text-gray-800">Meeting Schedule</h1>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setScheduleView('calendar')}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        scheduleView === 'calendar' ? 'bg-white text-jci-navy shadow-sm' : 'text-gray-600 hover:text-gray-800'
+                      }`}
+                    >
+                      <Calendar size={16} />
+                      Calendar
+                    </button>
+                    <button
+                      onClick={() => setScheduleView('list')}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        scheduleView === 'list' ? 'bg-white text-jci-navy shadow-sm' : 'text-gray-600 hover:text-gray-800'
+                      }`}
+                    >
+                      <List size={16} />
+                      List
+                    </button>
+                  </div>
                   <button
                     onClick={handleSyncFromZoom}
                     disabled={isSyncing}
@@ -265,7 +287,11 @@ const App: React.FC = () => {
                   </button>
                 </div>
              </div>
-             <CalendarView meetings={meetings} onDelete={handleDelete} onEdit={handleEdit} />
+             {scheduleView === 'calendar' ? (
+               <CalendarView meetings={meetings} onDelete={handleDelete} onEdit={handleEdit} />
+             ) : (
+               <ListView meetings={meetings} onDelete={handleDelete} onEdit={handleEdit} />
+             )}
           </div>
         )}
 

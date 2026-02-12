@@ -9,12 +9,12 @@ interface CalendarViewProps {
   onEdit?: (id: string) => void;
 }
 
-// Configuration for the calendar grid
-const START_HOUR = 7; // 7 AM
-const END_HOUR = 23; // 11 PM
-const TOTAL_HOURS = END_HOUR - START_HOUR + 1;
-const HOURS = Array.from({ length: TOTAL_HOURS }, (_, i) => i + START_HOUR);
-const CELL_HEIGHT = 80; // Pixels per hour for vertical scaling
+// Configuration for the calendar grid - full 24 hours
+const START_HOUR = 0;
+const END_HOUR = 24;
+const TOTAL_HOURS = END_HOUR - START_HOUR;
+const HOURS = Array.from({ length: TOTAL_HOURS }, (_, i) => i);
+const CELL_HEIGHT = 48; // Pixels per hour (24h × 48px = 1152px scrollable)
 
 const CalendarView: React.FC<CalendarViewProps> = ({ meetings, onDelete, onEdit }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -73,7 +73,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ meetings, onDelete, onEdit 
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[800px] overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col min-h-[600px] max-h-[900px] overflow-hidden">
       {/* Header Controls */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center space-x-4">
