@@ -165,10 +165,10 @@ const App: React.FC = () => {
   const totalMeetings = meetings.length;
   const upcomingToday = meetings.filter(m => m.date === new Date().toISOString().split('T')[0]).length;
   
-  // Get next meeting for dashboard highlight
-  const nextMeeting = meetings
+  // Get all upcoming meetings (sorted by date/time)
+  const upcomingMeetings = meetings
     .filter(m => new Date(m.date + 'T' + m.startTime) >= new Date())
-    .sort((a,b) => new Date(a.date + 'T' + a.startTime).getTime() - new Date(b.date + 'T' + b.startTime).getTime())[0];
+    .sort((a, b) => new Date(a.date + 'T' + a.startTime).getTime() - new Date(b.date + 'T' + b.startTime).getTime());
 
   return (
     <div className="min-h-screen flex flex-col font-sans text-gray-800 bg-gray-50">
@@ -210,15 +210,17 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* Next Up Section */}
+              {/* Next Up Section - all upcoming meetings */}
               <div className="mb-8">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-bold text-gray-800">Next Up</h2>
                   <button onClick={() => setView(ViewState.SCHEDULE)} className="text-jci-blue hover:underline text-sm font-medium">View Full Schedule &rarr;</button>
                 </div>
-                {nextMeeting ? (
-                   <div className="max-w-md">
-                        <MeetingCard meeting={nextMeeting} onEdit={handleEdit} />
+                {upcomingMeetings.length > 0 ? (
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {upcomingMeetings.map((meeting) => (
+                          <MeetingCard key={meeting.id} meeting={meeting} onEdit={handleEdit} onDelete={handleDelete} />
+                        ))}
                    </div>
                 ) : (
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center text-gray-500">

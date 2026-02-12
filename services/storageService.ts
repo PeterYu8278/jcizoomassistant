@@ -82,12 +82,15 @@ export const syncMeetingsFromZoom = async (): Promise<Meeting[]> => {
     return da - db;
   });
 
+  // Deduplicate by id to avoid "cannot affect row a second time" on upsert
+  const deduped = Array.from(new Map(merged.map((m) => [m.id, m])).values());
+
   if (isSupabaseConfigured()) {
-    await upsertToSupabase(merged);
+    await upsertToSupabase(deduped);
   } else {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(deduped));
   }
-  return merged;
+  return deduped;
 };
 
 

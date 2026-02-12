@@ -50,6 +50,14 @@ const CalendarView: React.FC<CalendarViewProps> = ({ meetings, onDelete, onEdit 
   
   const goToToday = () => setCurrentDate(new Date());
 
+  // Local date string YYYY-MM-DD (avoid UTC shift in toISOString)
+  const toLocalDateKey = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
   // Positioning logic for meeting blocks
   const getMeetingStyle = (meeting: Meeting) => {
     const [hours, minutes] = meeting.startTime.split(':').map(Number);
@@ -104,10 +112,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ meetings, onDelete, onEdit 
           {/* Grid */}
           <div className="flex-grow grid grid-cols-7 divide-x divide-gray-100 min-w-[800px]">
               {weekDays.map((day) => {
-                  const dateKey = day.toISOString().split('T')[0];
+                  const dateKey = toLocalDateKey(day);
                   // Filter meetings for this specific day
                   const dayMeetings = meetings.filter(m => m.date === dateKey);
-                  const isToday = new Date().toISOString().split('T')[0] === dateKey;
+                  const isToday = toLocalDateKey(new Date()) === dateKey;
 
                   return (
                       <div key={dateKey} className="relative bg-white group">
