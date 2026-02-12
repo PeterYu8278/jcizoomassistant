@@ -88,3 +88,25 @@ export const deleteZoomMeeting = async (meetingId: string): Promise<void> => {
 };
 
 export const isZoomApiConfigured = (): boolean => USE_ZOOM_API;
+
+/** Raw Zoom meeting from API */
+export interface ZoomMeetingRaw {
+  id: number;
+  topic: string;
+  start_time: string;
+  duration: number;
+  join_url: string;
+  agenda?: string;
+}
+
+/** List meetings from Zoom API (for sync) */
+export const listZoomMeetings = async (): Promise<ZoomMeetingRaw[]> => {
+  if (!USE_ZOOM_API) return [];
+
+  const base = getApiBase();
+  const response = await fetch(`${base}/api/zoom/list?type=scheduled`);
+  if (!response.ok) return [];
+
+  const data = await response.json();
+  return data.meetings || [];
+};

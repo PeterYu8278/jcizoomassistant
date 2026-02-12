@@ -4,9 +4,9 @@ import CalendarView from './components/CalendarView';
 import BookingForm from './components/BookingForm';
 import MeetingCard from './components/MeetingCard';
 import { ViewState, Meeting, BookingFormData } from './types';
-import { getMeetings, saveMeeting, updateMeeting, deleteMeeting } from './services/storageService';
+import { loadMeetings, saveMeeting, updateMeeting, deleteMeeting, syncMeetingsFromZoom } from './services/storageService';
 import { createZoomMeeting, updateZoomMeeting, deleteZoomMeeting as deleteZoomMeetingAPI } from './services/zoomService';
-import { Users, Video, CalendarCheck } from 'lucide-react';
+import { Users, Video, CalendarCheck, RefreshCw } from 'lucide-react';
 
 // A visual separator / banner
 const HeroBanner = () => (
@@ -23,11 +23,33 @@ const App: React.FC = () => {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [editingMeetingId, setEditingMeetingId] = useState<string | null>(null);
   const [isCreatingMeeting, setIsCreatingMeeting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const refreshMeetings = async () => {
+    const m = await loadMeetings();
+    setMeetings(m);
+  };
 
   useEffect(() => {
-    // Load initial data
-    setMeetings(getMeetings());
+    refreshMeetings();
+    syncMeetingsFromZoom().then(setMeetings).catch(() => {});
   }, []);
+
+  const handleSyncFromZoom = async () => {
+    setIsSyncing(true);
+    try {
+      const synced = await syncMeetingsFromZoom();
+      setMeetings(synced);
+    } catch (e) {
+      console.error('Sync failed:', e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isCreatingMeeting) refreshMeetings();
+  }, [isCreatingMeeting]);
 
   const handleBookingSubmit = async (data: BookingFormData) => {
     setIsCreatingMeeting(true);
@@ -70,7 +92,7 @@ const App: React.FC = () => {
           ...data,
           zoomLink: finalZoomLink
         };
-        updateMeeting(editingMeetingId, updatedMeeting);
+        await updateMeeting(editingMeetingId, updatedMeeting);
         setEditingMeetingId(null);
       } else {
         // Create new meeting
@@ -100,10 +122,10 @@ const App: React.FC = () => {
           zoomLink: finalZoomLink,
           zoomMeetingId
         };
-        saveMeeting(newMeeting);
+        await saveMeeting(newMeeting);
       }
 
-      setMeetings(getMeetings()); // Refresh state
+      await refreshMeetings();
       setView(ViewState.SCHEDULE); // Redirect to schedule
     } catch (error) {
       console.error('Error creating/updating meeting:', error);
@@ -132,8 +154,8 @@ const App: React.FC = () => {
               }
           }
           
-          deleteMeeting(id);
-          setMeetings(getMeetings());
+          await deleteMeeting(id);
+          await refreshMeetings();
       }
   }
 
@@ -228,9 +250,20 @@ const App: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
              <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-800">Meeting Schedule</h1>
-                <button onClick={() => setView(ViewState.BOOKING)} className="bg-jci-blue text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleSyncFromZoom}
+                    disabled={isSyncing}
+                    className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-jci-navy hover:bg-gray-100 rounded-lg text-sm font-medium disabled:opacity-50"
+                    title="Sync from Zoom"
+                  >
+                    <RefreshCw size={18} className={isSyncing ? 'animate-spin' : ''} />
+                    {isSyncing ? 'Syncing...' : 'Sync'}
+                  </button>
+                  <button onClick={() => setView(ViewState.BOOKING)} className="bg-jci-blue text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors">
                     + New Booking
-                </button>
+                  </button>
+                </div>
              </div>
              <CalendarView meetings={meetings} onDelete={handleDelete} onEdit={handleEdit} />
           </div>

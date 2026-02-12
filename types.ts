@@ -14,6 +14,7 @@ export interface Meeting {
   durationMinutes: number;
   zoomLink: string;
   category: 'Board' | 'Training' | 'Social' | 'Project';
+  zoomMeetingId?: string; // Zoom API meeting ID for sync
 }
 
 export interface BookingFormData {
