@@ -5,9 +5,10 @@ import { ViewState } from '../types';
 interface HeaderProps {
   currentView: ViewState;
   onChangeView: (view: ViewState) => void;
+  onBookNewMeeting?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentView, onChangeView }) => {
+const Header: React.FC<HeaderProps> = ({ currentView, onChangeView, onBookNewMeeting }) => {
   const navItemClass = (view: ViewState) => `
     flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-200 font-medium
     ${currentView === view 
@@ -49,7 +50,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, onChangeView }) => {
               <span>Schedule</span>
             </button>
             <button 
-              onClick={() => onChangeView(ViewState.BOOKING)}
+              onClick={() => (onBookNewMeeting ?? (() => onChangeView(ViewState.BOOKING)))()}
               className={navItemClass(ViewState.BOOKING)}
             >
               <PlusCircle size={18} />

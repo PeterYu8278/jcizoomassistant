@@ -86,7 +86,7 @@ const App: React.FC = () => {
               const zoomData = await updateZoomMeeting(
                 zoomMeetingId,
                 data.title,
-                `${data.date}T${data.startTime}`,
+                new Date(`${data.date}T${data.startTime}`).toISOString(),
                 data.durationMinutes,
                 data.description
               );
@@ -102,10 +102,12 @@ const App: React.FC = () => {
           }
         }
         
+        const existingZoomId = (existingMeeting as Meeting & { zoomMeetingId?: string })?.zoomMeetingId;
         const updatedMeeting: Meeting = {
           id: editingMeetingId,
           ...data,
-          zoomLink: finalZoomLink
+          zoomLink: finalZoomLink,
+          ...(existingZoomId ? { zoomMeetingId: existingZoomId } : {}),
         };
         await updateMeeting(editingMeetingId, updatedMeeting);
         setEditingMeetingId(null);
@@ -119,7 +121,7 @@ const App: React.FC = () => {
           try {
             const zoomData = await createZoomMeeting(
               data.title,
-              `${data.date}T${data.startTime}`,
+              new Date(`${data.date}T${data.startTime}`).toISOString(),
               data.durationMinutes,
               data.description
             );
@@ -185,7 +187,11 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col font-sans text-gray-800 bg-gray-50">
-      <Header currentView={view} onChangeView={handleViewChange} />
+      <Header 
+        currentView={view} 
+        onChangeView={handleViewChange} 
+        onBookNewMeeting={() => { setEditingMeetingId(null); handleViewChange(ViewState.BOOKING); }} 
+      />
 
       <main className="flex-grow pb-12">
         {view === ViewState.DASHBOARD && (
@@ -249,7 +255,7 @@ const App: React.FC = () => {
                         <h3 className="text-xl font-bold mb-2">Need to schedule?</h3>
                         <p className="text-blue-100 mb-6">Book a new Zoom meeting room instantly. Use our AI assistant to draft your agenda.</p>
                     </div>
-                    <button onClick={() => setView(ViewState.BOOKING)} className="bg-white text-jci-navy px-4 py-2 rounded-lg font-bold w-max hover:bg-gray-100 transition-colors">
+                    <button onClick={() => { setEditingMeetingId(null); setView(ViewState.BOOKING); }} className="bg-white text-jci-navy px-4 py-2 rounded-lg font-bold w-max hover:bg-gray-100 transition-colors">
                         Book Now
                     </button>
                  </div>
@@ -297,7 +303,7 @@ const App: React.FC = () => {
                     <RefreshCw size={18} className={isSyncing ? 'animate-spin' : ''} />
                     {isSyncing ? 'Syncing...' : 'Sync'}
                   </button>
-                  <button onClick={() => setView(ViewState.BOOKING)} className="bg-jci-blue text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors">
+                  <button onClick={() => { setEditingMeetingId(null); setView(ViewState.BOOKING); }} className="bg-jci-blue text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors">
                     + New Booking
                   </button>
                 </div>
