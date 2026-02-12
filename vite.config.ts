@@ -14,13 +14,7 @@ export default defineConfig(({ mode }) => {
           port: 3000,
           protocol: 'ws',
         },
-        proxy: {
-          '/api/zoom': {
-            target: 'https://api.zoom.us',
-            changeOrigin: true,
-            rewrite: (path) => path.replace(/^\/api\/zoom/, '/v2'),
-          },
-        },
+        // Zoom API calls go to Netlify Functions - use `netlify dev` for full Zoom support locally
       },
       plugins: [react(), tailwindcss()],
       define: {
