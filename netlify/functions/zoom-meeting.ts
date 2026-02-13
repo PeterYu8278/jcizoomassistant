@@ -124,10 +124,29 @@ export default async (req: Request, context: Context) => {
     });
 
     if (!zoomRes.ok) {
-      const errData = await zoomRes.json();
+      const errData = await zoomRes.json().catch(() => ({}));
+      const errMsg = (errData as any)?.message || (errData as any)?.code || zoomRes.statusText;
       return new Response(
-        JSON.stringify({ error: errData.message || zoomRes.statusText }),
+        JSON.stringify({ error: errMsg }),
         { status: zoomRes.status, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Zoom PATCH returns 204 No Content (empty body) on success - fetch meeting to get join_url
+    if (zoomRes.status === 204) {
+      const getRes = await fetch(`https://api.zoom.us/v2/meetings/${meetingId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!getRes.ok) {
+        return new Response(
+          JSON.stringify({ error: "Update succeeded but could not fetch meeting details" }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      const data = await getRes.json();
+      return new Response(
+        JSON.stringify({ joinUrl: data.join_url, startUrl: data.start_url }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
       );
     }
 

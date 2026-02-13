@@ -66,8 +66,9 @@ export const updateZoomMeeting = async (
   });
 
   if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.error || response.statusText);
+    const err = await response.json().catch(() => ({}));
+    const msg = (err as { error?: string }).error || (err as { message?: string }).message || response.statusText;
+    throw new Error(msg || `Zoom update failed (${response.status})`);
   }
 
   return response.json();
