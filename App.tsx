@@ -81,21 +81,14 @@ const App: React.FC = () => {
           const zoomMeetingId = (existingMeeting as any)?.zoomMeetingId;
           
           if (zoomMeetingId) {
-            try {
-              // Update Zoom meeting via API
-              const zoomData = await updateZoomMeeting(
-                zoomMeetingId,
-                data.title,
-                new Date(`${data.date}T${data.startTime}`).toISOString(),
-                data.durationMinutes,
-                data.description
-              );
-              finalZoomLink = zoomData.joinUrl;
-            } catch (error) {
-              console.error('Failed to update Zoom meeting:', error);
-              // Keep existing link if update fails
-              finalZoomLink = existingMeeting?.zoomLink || '';
-            }
+            const zoomData = await updateZoomMeeting(
+              zoomMeetingId,
+              data.title,
+              new Date(`${data.date}T${data.startTime}`).toISOString(),
+              data.durationMinutes,
+              data.description
+            );
+            finalZoomLink = zoomData.joinUrl;
           } else {
             // Keep existing link if no Zoom meeting ID
             finalZoomLink = existingMeeting?.zoomLink || '';
@@ -111,6 +104,8 @@ const App: React.FC = () => {
         };
         await updateMeeting(editingMeetingId, updatedMeeting);
         setEditingMeetingId(null);
+        await refreshMeetings();
+        setView(ViewState.SCHEDULE);
       } else {
         // Create new meeting
         let finalZoomLink = data.manualZoomLink;
@@ -140,10 +135,9 @@ const App: React.FC = () => {
           zoomMeetingId
         };
         await saveMeeting(newMeeting);
+        await refreshMeetings();
+        handleViewChange(ViewState.SCHEDULE);
       }
-
-      await refreshMeetings();
-      handleViewChange(ViewState.SCHEDULE); // Redirect to schedule (triggers sync)
     } catch (error) {
       console.error('Error creating/updating meeting:', error);
       alert('Failed to create/update meeting. Please try again.');
