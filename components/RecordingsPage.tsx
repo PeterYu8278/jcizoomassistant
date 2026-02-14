@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { HardDrive, ExternalLink, Download, Calendar, RefreshCw, Loader2, ChevronDown } from 'lucide-react';
 import { getAccountRecordings, isZoomApiConfigured, ZoomRecordingFile } from '../services/zoomService';
-import { getTodayInAppTz } from '../utils/timezone';
 
 const formatRecordingType = (t: string): string => {
   const map: Record<string, string> = {
@@ -35,9 +34,12 @@ const formatMeetingTime = (utcIso: string): string => {
   });
 };
 
+/** Get UTC date string YYYY-MM-DD for n days ago */
+const utcDate = (daysAgo: number) => new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
 const RecordingsPage: React.FC = () => {
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [from, setFrom] = useState(utcDate(30));
+  const [to, setTo] = useState(utcDate(0));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [meetings, setMeetings] = useState<{ topic: string; start_time: string; duration: number; recording_files: ZoomRecordingFile[] }[]>([]);
@@ -45,40 +47,57 @@ const RecordingsPage: React.FC = () => {
   const [nextPageToken, setNextPageToken] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const loadRecordings = useCallback(async (pageToken?: string, isLoadMore = false) => {
+  const loadRecordings = useCallback(async () => {
     if (!isZoomApiConfigured()) {
       setError('Zoom API is not configured. Set VITE_USE_ZOOM_API=true.');
       return;
     }
-    if (!isLoadMore) setLoading(true);
+    setLoading(true);
     setError(null);
-    const today = getTodayInAppTz();
-    const defaultTo = today;
-    const defaultFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const params = { from: from || defaultFrom, to: to || defaultTo, pageSize: 300, nextPageToken: pageToken };
-    let allMeetings: { topic: string; start_time: string; duration: number; recording_files: ZoomRecordingFile[] }[] = [];
-    let total = 0;
-    let nextToken = pageToken;
+    const fromDate = from || utcDate(30);
+    const toDate = to || utcDate(0);
+    const allMeetings: { topic: string; start_time: string; duration: number; recording_files: ZoomRecordingFile[] }[] = [];
     try {
-      do {
-        const res = await getAccountRecordings({
-          ...params,
-          from: params.from,
-          to: params.to,
-          pageSize: 300,
-          nextPageToken: nextToken,
-        });
-        allMeetings = nextToken ? [...allMeetings, ...res.meetings] : res.meetings;
-        total = res.totalRecords;
-        nextToken = res.nextPageToken || '';
-        params.nextPageToken = nextToken;
-        setMeetings(nextToken ? [...allMeetings] : allMeetings);
-        setTotalRecords(total);
-        setNextPageToken(nextToken);
-      } while (nextToken);
+      // Zoom API allows max 1 month per request - split into month chunks
+      const chunks: { from: string; to: string }[] = [];
+      let cur = new Date(fromDate + 'T00:00:00Z');
+      const end = new Date(toDate + 'T23:59:59Z');
+      while (cur <= end) {
+        const chunkEnd = new Date(cur.getTime());
+        chunkEnd.setUTCMonth(chunkEnd.getUTCMonth() + 1);
+        chunkEnd.setUTCDate(0); // last day of current month (day 0 = prev month's last day)
+        if (chunkEnd > end) {
+          chunks.push({ from: cur.toISOString().slice(0, 10), to: toDate });
+        } else {
+          chunks.push({
+            from: cur.toISOString().slice(0, 10),
+            to: chunkEnd.toISOString().slice(0, 10),
+          });
+        }
+        cur.setUTCMonth(cur.getUTCMonth() + 1);
+        cur.setUTCDate(1);
+      }
+      for (const chunk of chunks) {
+        let nextToken = '';
+        do {
+          const res = await getAccountRecordings({
+            from: chunk.from,
+            to: chunk.to,
+            pageSize: 300,
+            nextPageToken: nextToken || undefined,
+          });
+          allMeetings.push(...res.meetings);
+          nextToken = res.nextPageToken || '';
+        } while (nextToken);
+      }
+      // Sort by start_time descending (newest first)
+      allMeetings.sort((a, b) => (b.start_time || '').localeCompare(a.start_time || ''));
+      setMeetings(allMeetings);
+      setTotalRecords(allMeetings.length);
+      setNextPageToken('');
     } catch (e) {
       setError((e as Error)?.message || 'Failed to load recordings');
-      if (!isLoadMore) setMeetings([]);
+      setMeetings([]);
     } finally {
       setLoading(false);
     }
@@ -94,9 +113,6 @@ const RecordingsPage: React.FC = () => {
     loadRecordings();
   };
 
-  const handleLoadMore = () => {
-    if (nextPageToken) loadRecordings(nextPageToken);
-  };
 
   if (!isZoomApiConfigured()) {
     return (
@@ -148,7 +164,7 @@ const RecordingsPage: React.FC = () => {
             {loading ? 'Loading...' : 'Search'}
           </button>
         </div>
-        <p className="text-xs text-gray-500 mt-2">Date range is in UTC. Zoom API allows max 1 month per query. For older recordings, select a different month and click Search.</p>
+        <p className="text-xs text-gray-500 mt-2">Date range in UTC. Zoom API allows max 1 month per query; ranges &gt;1 month are auto-split. Recordings are for the Zoom user associated with this app.</p>
       </div>
 
       {error && (
@@ -222,17 +238,6 @@ const RecordingsPage: React.FC = () => {
               );
             })}
           </div>
-          {nextPageToken && (
-            <div className="mt-6 flex justify-center">
-              <button
-                onClick={handleLoadMore}
-                disabled={loading}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50"
-              >
-                {loading ? 'Loading...' : 'Load more'}
-              </button>
-            </div>
-          )}
         </>
       )}
     </div>
