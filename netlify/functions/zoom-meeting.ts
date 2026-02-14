@@ -9,11 +9,10 @@ interface UpdateMeetingBody {
   agenda?: string;
 }
 
-const TZ_OFFSET = "+08:00";
-
-const toUtcIso = (date: string, startTime: string): string => {
+/** Format date + startTime as local time for Zoom - no Z, no ms (Zoom uses timezone param) */
+const toZoomLocalTime = (date: string, startTime: string): string => {
   const normalized = startTime.includes(":") && startTime.length <= 5 ? `${startTime}:00` : startTime.slice(0, 8);
-  return new Date(`${date}T${normalized}${TZ_OFFSET}`).toISOString();
+  return `${date}T${normalized}`;
 };
 
 const getEnv = (k: string) => process.env[k] ?? (globalThis as any).Netlify?.env?.get?.(k);
@@ -115,12 +114,14 @@ export default async (req: Request, context: Context) => {
     const { topic, startTime, date, durationMinutes, agenda } = body;
     const zoomStartTime =
       date && /^\d{4}-\d{2}-\d{2}$/.test(date) && /^\d{1,2}:\d{2}$/.test(startTime.trim())
-        ? toUtcIso(date, startTime.trim())
-        : new Date(startTime).toISOString();
+        ? toZoomLocalTime(date, startTime.trim())
+        : new Date(startTime).toISOString().replace(/\.\d{3}Z$/, "Z");
 
+    const timezone = getEnv("VITE_ZOOM_TIMEZONE") || "Asia/Kuala_Lumpur";
     const meetingRequest = {
       topic,
       start_time: zoomStartTime,
+      timezone,
       duration: durationMinutes,
       agenda: agenda || undefined,
     };

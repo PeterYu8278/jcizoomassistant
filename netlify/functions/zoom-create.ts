@@ -10,12 +10,10 @@ interface CreateMeetingBody {
   password?: string;
 }
 
-const TZ_OFFSET = "+08:00"; // Asia/Kuala_Lumpur = UTC+8
-
-/** Convert date (YYYY-MM-DD) + startTime (HH:mm) in app timezone to UTC ISO */
-const toUtcIso = (date: string, startTime: string): string => {
+/** Format date (YYYY-MM-DD) + startTime (HH:mm) as local time for Zoom - no Z, no ms (Zoom uses timezone param) */
+const toZoomLocalTime = (date: string, startTime: string): string => {
   const normalized = startTime.includes(":") && startTime.length <= 5 ? `${startTime}:00` : startTime.slice(0, 8);
-  return new Date(`${date}T${normalized}${TZ_OFFSET}`).toISOString();
+  return `${date}T${normalized}`; // e.g. "2025-02-15T17:00:00" - Zoom interprets with timezone param
 };
 
 const getEnv = (k: string): string | undefined =>
@@ -114,8 +112,8 @@ export default async (req: Request, _context: Context) => {
 
     const zoomStartTime =
       date && /^\d{4}-\d{2}-\d{2}$/.test(date) && /^\d{1,2}:\d{2}$/.test(startTime.trim())
-        ? toUtcIso(date, startTime.trim())
-        : new Date(startTime).toISOString();
+        ? toZoomLocalTime(date, startTime.trim())
+        : new Date(startTime).toISOString().replace(/\.\d{3}Z$/, "Z");
     const timezone = getEnv("VITE_ZOOM_TIMEZONE") || "Asia/Kuala_Lumpur";
     const registrationType = parseInt(getEnv("VITE_ZOOM_REGISTRATION_TYPE") || "0", 10);
 
