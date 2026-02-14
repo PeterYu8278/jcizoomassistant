@@ -17,9 +17,17 @@ export const parseAsAppTz = (date: string, startTime: string): Date => {
   return d;
 };
 
+/** Zoom API returns start_time in UTC. Parse as UTC (append Z if no timezone). */
+const parseAsUtc = (s: string): Date => {
+  const t = (s || "").trim();
+  if (!t) return new Date(NaN);
+  if (/Z$|[+-]\d{2}:?\d{2}$/.test(t)) return new Date(t);
+  return new Date(t + "Z");
+};
+
 /** Convert UTC ISO string (e.g. from Zoom) to { date, startTime } in app timezone */
 export const utcToAppTz = (utcIso: string): { date: string; startTime: string } => {
-  const d = new Date(utcIso);
+  const d = parseAsUtc(utcIso);
   const datePart = d.toLocaleDateString("en-CA", { timeZone: APP_TIMEZONE }); // YYYY-MM-DD
   const timePart = d.toLocaleTimeString("en-CA", {
     timeZone: APP_TIMEZONE,
