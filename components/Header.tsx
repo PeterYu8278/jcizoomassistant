@@ -1,5 +1,5 @@
 import React from 'react';
-import { Video, Calendar, PlusCircle, LayoutDashboard } from 'lucide-react';
+import { Video, Calendar, PlusCircle, LayoutDashboard, HardDrive } from 'lucide-react';
 import { ViewState } from '../types';
 
 interface HeaderProps {
@@ -48,6 +48,13 @@ const Header: React.FC<HeaderProps> = ({ currentView, onChangeView, onBookNewMee
             >
               <Calendar size={18} />
               <span>Schedule</span>
+            </button>
+            <button 
+              onClick={() => onChangeView(ViewState.RECORDINGS)}
+              className={navItemClass(ViewState.RECORDINGS)}
+            >
+              <HardDrive size={18} />
+              <span>Recordings</span>
             </button>
             <button 
               onClick={() => (onBookNewMeeting ?? (() => onChangeView(ViewState.BOOKING)))()}

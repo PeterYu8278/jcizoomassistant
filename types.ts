@@ -2,6 +2,7 @@ export enum ViewState {
   DASHBOARD = 'DASHBOARD',
   SCHEDULE = 'SCHEDULE',
   BOOKING = 'BOOKING',
+  RECORDINGS = 'RECORDINGS',
 }
 
 export interface Meeting {

@@ -12,7 +12,7 @@ Zoom meetings are created via **Netlify serverless functions** (backend proxy). 
 
 1. Go to [Zoom Marketplace](https://marketplace.zoom.us/)
 2. Click **Develop** → **Build App** → **Server-to-Server OAuth**
-3. Add scopes: `meeting:write`, `meeting:read`, `meeting:delete`
+3. Add scopes: `meeting:write`, `meeting:read`, `meeting:delete`, `recording:read` (for cloud recordings)
 4. Activate the app
 5. Copy **Account ID**, **Client ID**, and **Client Secret**
 
@@ -48,6 +48,7 @@ Deploy to Netlify; the functions are bundled automatically. Ensure env vars are 
 - `POST /api/zoom/create` – Create meeting
 - `PATCH /api/zoom/meetings/:id` – Update meeting
 - `DELETE /api/zoom/meetings/:id` – Delete meeting
+- `GET /api/zoom/meetings/:id/recordings` – List cloud recordings for a meeting
 
 ## Disable Zoom
 

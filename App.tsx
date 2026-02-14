@@ -5,6 +5,7 @@ import CalendarView from './components/CalendarView';
 import ListView from './components/ListView';
 import BookingForm from './components/BookingForm';
 import MeetingCard from './components/MeetingCard';
+import RecordingsPage from './components/RecordingsPage';
 import { ViewState, Meeting, BookingFormData } from './types';
 import { loadMeetings, saveMeeting, updateMeeting, deleteMeeting, syncMeetingsFromZoom } from './services/storageService';
 import { createZoomMeeting, updateZoomMeeting, deleteZoomMeeting as deleteZoomMeetingAPI } from './services/zoomService';
@@ -292,6 +293,10 @@ const App: React.FC = () => {
                <ListView meetings={meetings} onDelete={handleDelete} onEdit={handleEdit} />
              )}
           </div>
+        )}
+
+        {view === ViewState.RECORDINGS && (
+          <RecordingsPage />
         )}
 
         {view === ViewState.BOOKING && (

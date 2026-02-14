@@ -105,6 +105,110 @@ export interface ZoomMeetingRaw {
   agenda?: string;
 }
 
+/** Cloud recording file from Zoom API */
+export interface ZoomRecordingFile {
+  id: string;
+  meeting_id: string;
+  recording_start: string;
+  recording_end: string;
+  file_type: string;
+  file_size?: number;
+  playback_url?: string;
+  download_url?: string;
+  status: string;
+  recording_type: string;
+}
+
+/** Cloud recordings response */
+export interface ZoomRecordingsResponse {
+  uuid?: string;
+  meetingId?: number;
+  topic?: string;
+  startTime?: string;
+  duration?: number;
+  recordingCount: number;
+  recordingFiles: ZoomRecordingFile[];
+}
+
+/** Account-level recording (meeting with its recording files) */
+export interface AccountRecordingMeeting {
+  uuid: string;
+  id: number;
+  topic: string;
+  start_time: string;
+  duration: number;
+  recording_count: number;
+  recording_files: ZoomRecordingFile[];
+}
+
+/** List all cloud recordings for the account (date range, max 1 month) */
+export const getAccountRecordings = async (params?: {
+  from?: string; // YYYY-MM-DD
+  to?: string;   // YYYY-MM-DD
+  pageSize?: number;
+  nextPageToken?: string;
+}): Promise<{
+  from: string;
+  to: string;
+  pageCount: number;
+  totalRecords: number;
+  nextPageToken: string;
+  meetings: AccountRecordingMeeting[];
+}> => {
+  if (!USE_ZOOM_API) {
+    throw new Error('Zoom API is disabled.');
+  }
+
+  const base = getApiBase();
+  const sp = new URLSearchParams();
+  if (params?.from) sp.set('from', params.from);
+  if (params?.to) sp.set('to', params.to);
+  if (params?.pageSize) sp.set('page_size', String(params.pageSize));
+  if (params?.nextPageToken) sp.set('next_page_token', params.nextPageToken);
+
+  const url = `${base}/api/zoom/recordings${sp.toString() ? `?${sp}` : ''}`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    const msg = (err as { error?: string }).error || (err as { message?: string }).message || response.statusText;
+    throw new Error(msg || `Failed to fetch recordings (${response.status})`);
+  }
+
+  const data = await response.json();
+  return {
+    from: data.from,
+    to: data.to,
+    pageCount: data.pageCount ?? 0,
+    totalRecords: data.totalRecords ?? 0,
+    nextPageToken: data.nextPageToken ?? '',
+    meetings: data.meetings ?? [],
+  };
+};
+
+/** Get cloud recordings for a meeting (requires recording:read scope) */
+export const getMeetingRecordings = async (meetingId: string): Promise<ZoomRecordingsResponse> => {
+  if (!USE_ZOOM_API) {
+    throw new Error('Zoom API is disabled.');
+  }
+
+  const base = getApiBase();
+  const response = await fetch(`${base}/api/zoom/meetings/${encodeURIComponent(meetingId)}/recordings`);
+
+  if (response.status === 404) {
+    const err = await response.json();
+    throw new Error((err as { error?: string }).error || 'No recordings found for this meeting.');
+  }
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    const msg = (err as { error?: string }).error || (err as { message?: string }).message || response.statusText;
+    throw new Error(msg || `Failed to fetch recordings (${response.status})`);
+  }
+
+  return response.json();
+};
+
 /** List meetings from Zoom API (for sync) */
 export const listZoomMeetings = async (): Promise<ZoomMeetingRaw[]> => {
   if (!USE_ZOOM_API) return [];
