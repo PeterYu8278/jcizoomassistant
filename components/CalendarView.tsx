@@ -16,7 +16,7 @@ const START_HOUR = 8;   // 早上8点
 const END_HOUR = 24;    // 晚上12点 (midnight)
 const TOTAL_HOURS = END_HOUR - START_HOUR;
 const HOURS = Array.from({ length: TOTAL_HOURS }, (_, i) => START_HOUR + i);
-const CELL_HEIGHT = 48; // Pixels per hour (24h × 48px = 1152px scrollable)
+const CELL_HEIGHT = 44; // Compact for mobile, works on desktop
 
 const CalendarView: React.FC<CalendarViewProps> = ({ meetings, onDelete, onEdit }) => {
   const [mode, setMode] = useState<CalendarMode>('week');
@@ -86,60 +86,60 @@ const CalendarView: React.FC<CalendarViewProps> = ({ meetings, onDelete, onEdit 
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col min-h-[600px] max-h-[900px] overflow-hidden">
-      {/* Header Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border-b border-gray-200 flex-shrink-0">
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-xl font-bold text-gray-800">
-            {startOfMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col min-h-[400px] sm:min-h-[600px] max-h-[85vh] sm:max-h-[900px] overflow-hidden">
+      {/* Header Controls - mobile compact */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 p-3 sm:p-4 border-b border-gray-200 flex-shrink-0">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <h2 className="text-base sm:text-xl font-bold text-gray-800">
+            {startOfMonth.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
           </h2>
-          <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
-            <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-white rounded shadow-sm transition-all text-gray-600"><ChevronLeft size={18} /></button>
-            <button onClick={goToToday} className="px-3 py-1 text-sm font-semibold text-gray-700 hover:bg-white rounded shadow-sm transition-all">Today</button>
-            <button onClick={() => navigate(1)} className="p-1.5 hover:bg-white rounded shadow-sm transition-all text-gray-600"><ChevronRight size={18} /></button>
+          <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
+            <button onClick={() => navigate(-1)} className="p-2.5 sm:p-1.5 hover:bg-white rounded-md transition-all text-gray-600 touch-manipulation" aria-label="Previous"><ChevronLeft size={20} /></button>
+            <button onClick={goToToday} className="px-3 py-2 sm:py-1 text-sm font-semibold text-gray-700 hover:bg-white rounded-md transition-all touch-manipulation">Today</button>
+            <button onClick={() => navigate(1)} className="p-2.5 sm:p-1.5 hover:bg-white rounded-md transition-all text-gray-600 touch-manipulation" aria-label="Next"><ChevronRight size={20} /></button>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex bg-gray-100 rounded-lg p-0.5">
             {(['week', 'month'] as CalendarMode[]).map((m) => (
               <button
                 key={m}
                 onClick={() => setMode(m)}
-                className={`px-3 py-1.5 text-sm font-medium rounded capitalize transition-all ${mode === m ? 'bg-white shadow text-jci-navy' : 'text-gray-600 hover:text-gray-900'}`}
+                className={`min-w-[64px] py-2 sm:py-1.5 px-3 text-sm font-medium rounded-md capitalize transition-all touch-manipulation ${mode === m ? 'bg-white shadow text-jci-navy' : 'text-gray-600 hover:text-gray-900'}`}
               >
                 {m}
               </button>
             ))}
           </div>
-          <span className="text-sm text-gray-500 hidden sm:inline">
+          <span className="text-xs sm:text-sm text-gray-500 hidden sm:inline">
             {meetings.length} meeting{meetings.length !== 1 ? 's' : ''} total
           </span>
         </div>
       </div>
 
-      <div className="flex-grow overflow-y-auto overflow-x-auto flex relative">
+      <div className="flex-grow overflow-y-auto overflow-x-auto flex relative overscroll-contain" >
         {/* Week view: time-based grid */}
         {mode === 'week' && (
           <>
-            <div className="w-16 flex-none border-r border-gray-100 bg-gray-50 pt-10 sticky left-0 z-20">
+            <div className="w-12 sm:w-16 flex-none border-r border-gray-100 bg-gray-50 pt-8 sm:pt-10 sticky left-0 z-20">
               {HOURS.map(hour => (
                 <div key={hour} className="text-right pr-2 text-xs text-gray-400 font-medium relative" style={{ height: CELL_HEIGHT }}>
                   <span className="-top-2 relative">{hour}:00</span>
                 </div>
               ))}
             </div>
-            <div className="flex-grow grid grid-cols-7 divide-x divide-gray-100 min-w-[800px]">
+            <div className="flex-grow grid grid-cols-7 divide-x divide-gray-100 min-w-[560px] sm:min-w-[700px]">
               {weekDays.map((day) => {
                 const dateKey = toLocalDateKey(day);
                 const dayMeetings = meetings.filter(m => m.date === dateKey);
                 const isToday = getTodayInAppTz() === dateKey;
                 return (
                   <div key={dateKey} className="relative bg-white group">
-                    <div className={`text-center py-3 border-b border-gray-100 sticky top-0 z-10 ${isToday ? 'bg-blue-50/90 backdrop-blur' : 'bg-white/95 backdrop-blur'}`}>
-                      <div className={`text-xs font-bold tracking-wider mb-1 ${isToday ? 'text-jci-blue' : 'text-gray-400'}`}>
-                        {day.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
+                    <div className={`text-center py-2 sm:py-3 border-b border-gray-100 sticky top-0 z-10 ${isToday ? 'bg-blue-50/90 backdrop-blur' : 'bg-white/95 backdrop-blur'}`}>
+                      <div className={`text-[10px] sm:text-xs font-bold tracking-wider mb-0.5 sm:mb-1 ${isToday ? 'text-jci-blue' : 'text-gray-400'}`}>
+                        {day.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase().slice(0, 2)}
                       </div>
-                      <div className={`text-xl font-bold w-9 h-9 rounded-full flex items-center justify-center mx-auto transition-colors ${isToday ? 'bg-jci-blue text-white shadow-md' : 'text-gray-700 group-hover:bg-gray-100'}`}>
+                      <div className={`text-base sm:text-xl font-bold w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center mx-auto transition-colors ${isToday ? 'bg-jci-blue text-white shadow-md' : 'text-gray-700 group-hover:bg-gray-100'}`}>
                         {day.getDate()}
                       </div>
                     </div>
@@ -162,7 +162,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ meetings, onDelete, onEdit 
                         <div
                           key={meeting.id}
                           onClick={() => setSelectedMeeting(meeting)}
-                          className={`absolute left-1 right-1 rounded-md px-2 py-1.5 text-xs cursor-pointer shadow-sm border overflow-hidden z-1 transition-all ${getCategoryColor(meeting.category)}`}
+                          className={`absolute left-0.5 right-0.5 sm:left-1 sm:right-1 rounded-md px-1.5 sm:px-2 py-1.5 text-[10px] sm:text-xs cursor-pointer shadow-sm border overflow-hidden z-1 transition-all min-h-[36px] active:scale-[0.98] ${getCategoryColor(meeting.category)}`}
                           style={getMeetingStyle(meeting)}
                           title={`${meeting.title} (${meeting.startTime})`}
                         >
@@ -184,15 +184,15 @@ const CalendarView: React.FC<CalendarViewProps> = ({ meetings, onDelete, onEdit 
 
         {/* Month view */}
         {mode === 'month' && (
-          <div className="flex-grow flex flex-col min-w-[600px]">
+          <div className="flex-grow flex flex-col min-w-[320px] sm:min-w-[500px]">
             {/* Weekday headers */}
             <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
-                <div key={d} className="text-center py-2 text-xs font-bold text-gray-500 uppercase">{d}</div>
+              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
+                <div key={i} className="text-center py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold text-gray-500 uppercase">{d}</div>
               ))}
             </div>
             {/* Date grid */}
-            <div className="flex-grow grid grid-cols-7 auto-rows-fr min-h-[400px]">
+            <div className="flex-grow grid grid-cols-7 auto-rows-fr min-h-[300px] sm:min-h-[400px]">
               {monthDays.map((day) => {
                 const dateKey = toLocalDateKey(day);
                 const dayMeetings = meetings.filter(m => m.date === dateKey);
@@ -201,17 +201,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({ meetings, onDelete, onEdit 
                 return (
                   <div
                     key={dateKey}
-                    className={`border-b border-r border-gray-100 p-2 overflow-hidden ${!isCurrentMonth ? 'bg-gray-50' : 'bg-white'} min-h-[80px]`}
+                    className={`border-b border-r border-gray-100 p-1 sm:p-2 overflow-hidden ${!isCurrentMonth ? 'bg-gray-50' : 'bg-white'} min-h-[60px] sm:min-h-[80px]`}
                   >
-                    <div className={`text-sm font-semibold mb-1 ${isToday ? 'w-7 h-7 rounded-full bg-jci-blue text-white flex items-center justify-center' : 'text-gray-700'} ${!isCurrentMonth ? 'text-gray-400' : ''}`}>
+                    <div className={`text-xs sm:text-sm font-semibold mb-0.5 sm:mb-1 ${isToday ? 'w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-jci-blue text-white flex items-center justify-center' : 'text-gray-700'} ${!isCurrentMonth ? 'text-gray-400' : ''}`}>
                       {day.getDate()}
                     </div>
-                    <div className="space-y-1 overflow-y-auto max-h-[120px]">
+                    <div className="space-y-0.5 sm:space-y-1 overflow-y-auto max-h-[80px] sm:max-h-[120px]">
                       {dayMeetings.slice(0, 3).map(meeting => (
                         <div
                           key={meeting.id}
                           onClick={() => setSelectedMeeting(meeting)}
-                          className={`text-xs px-1.5 py-0.5 rounded cursor-pointer truncate ${getCategoryColor(meeting.category)}`}
+                          className={`text-[10px] sm:text-xs px-1 sm:px-1.5 py-1 sm:py-0.5 rounded cursor-pointer truncate min-h-[28px] flex items-center active:scale-[0.98] ${getCategoryColor(meeting.category)}`}
                           title={`${meeting.title} ${meeting.startTime}`}
                         >
                           {meeting.startTime} {meeting.title}
