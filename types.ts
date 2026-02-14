@@ -9,10 +9,12 @@ export interface Meeting {
   title: string;
   description: string;
   host: string;
+  email?: string;
   date: string; // YYYY-MM-DD
   startTime: string; // HH:mm
   durationMinutes: number;
   zoomLink: string;
+  zoomPassword?: string;
   category: 'Board' | 'Training' | 'Social' | 'Project';
   zoomMeetingId?: string; // Zoom API meeting ID for sync
 }
@@ -21,6 +23,7 @@ export interface BookingFormData {
   title: string;
   description: string;
   host: string;
+  email: string;
   date: string;
   startTime: string;
   durationMinutes: number;

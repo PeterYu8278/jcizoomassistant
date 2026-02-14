@@ -114,6 +114,7 @@ const App: React.FC = () => {
           id: Date.now().toString(),
           ...data,
           zoomLink: zoomData.joinUrl,
+          zoomPassword: zoomData.password,
           zoomMeetingId: zoomData.meetingId,
         };
         await saveMeeting(newMeeting);

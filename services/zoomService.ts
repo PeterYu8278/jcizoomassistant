@@ -101,6 +101,7 @@ export interface ZoomMeetingRaw {
   start_time: string;
   duration: number;
   join_url: string;
+  password?: string;
   agenda?: string;
 }
 

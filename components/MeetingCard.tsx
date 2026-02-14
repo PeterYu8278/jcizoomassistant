@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Calendar as CalendarIcon, User, Video, Trash2, Copy, Check, FileText, X, Edit2 } from 'lucide-react';
+import { Clock, Calendar as CalendarIcon, User, Mail, Video, Key, Trash2, Copy, Check, FileText, X, Edit2 } from 'lucide-react';
 import { Meeting } from '../types';
 
 interface MeetingCardProps {
@@ -10,6 +10,7 @@ interface MeetingCardProps {
 
 const MeetingCard: React.FC<MeetingCardProps> = ({ meeting, onDelete, onEdit }) => {
   const [copied, setCopied] = useState(false);
+  const [copiedPwd, setCopiedPwd] = useState(false);
   const [showAgenda, setShowAgenda] = useState(false);
 
   const categoryColor = {
@@ -24,6 +25,15 @@ const MeetingCard: React.FC<MeetingCardProps> = ({ meeting, onDelete, onEdit }) 
     navigator.clipboard.writeText(meeting.zoomLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCopyPassword = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (meeting.zoomPassword) {
+      navigator.clipboard.writeText(meeting.zoomPassword);
+      setCopiedPwd(true);
+      setTimeout(() => setCopiedPwd(false), 2000);
+    }
   };
 
   return (
@@ -85,6 +95,27 @@ const MeetingCard: React.FC<MeetingCardProps> = ({ meeting, onDelete, onEdit }) 
               <User size={16} className="text-jci-blue" />
               <span>{meeting.host}</span>
             </div>
+            {meeting.email && (
+              <div className="flex items-center space-x-2">
+                <Mail size={16} className="text-jci-blue" />
+                <span className="truncate">{meeting.email}</span>
+              </div>
+            )}
+            {meeting.zoomPassword && (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center space-x-2 min-w-0">
+                  <Key size={16} className="text-jci-blue flex-shrink-0" />
+                  <span className="font-mono text-gray-700 truncate">Password: {meeting.zoomPassword}</span>
+                </div>
+                <button
+                  onClick={handleCopyPassword}
+                  className="flex-shrink-0 p-1 text-gray-400 hover:text-jci-navy rounded transition-colors"
+                  title="Copy password"
+                >
+                  {copiedPwd ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
+                </button>
+              </div>
+            )}
           </div>
         </div>
         
@@ -130,8 +161,10 @@ const MeetingCard: React.FC<MeetingCardProps> = ({ meeting, onDelete, onEdit }) 
             </div>
             <div className="p-6 overflow-y-auto">
                 <h4 className="font-semibold text-xl text-gray-900 mb-1">{meeting.title}</h4>
-                <p className="text-sm text-gray-500 mb-4 flex gap-2">
+                <p className="text-sm text-gray-500 mb-4 flex flex-wrap gap-x-4 gap-y-1">
                     <span>{meeting.date}</span> • <span>{meeting.startTime}</span>
+                    {meeting.email && <span>• {meeting.email}</span>}
+                    {meeting.zoomPassword && <span>• Pass: {meeting.zoomPassword}</span>}
                 </p>
                 <div className="prose prose-sm prose-blue max-w-none bg-gray-50 p-4 rounded-lg border border-gray-100">
                     <pre className="whitespace-pre-wrap font-sans text-gray-700">{meeting.description}</pre>

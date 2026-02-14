@@ -23,6 +23,7 @@ const zoomToMeeting = (z: ZoomMeetingRaw): Meeting & { zoomMeetingId: string } =
     startTime,
     durationMinutes: z.duration || 60,
     zoomLink: z.join_url,
+    zoomPassword: z.password ?? undefined,
     category: 'Project',
     zoomMeetingId: String(z.id),
   };
@@ -66,6 +67,7 @@ export const syncMeetingsFromZoom = async (): Promise<Meeting[]> => {
         startTime: fromZoom.startTime,
         durationMinutes: fromZoom.durationMinutes,
         description: fromZoom.description || existing.description,
+        zoomPassword: fromZoom.zoomPassword ?? existing.zoomPassword,
         zoomMeetingId: zid,
       };
       merged.push(updated);

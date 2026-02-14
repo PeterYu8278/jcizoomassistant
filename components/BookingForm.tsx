@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getTodayInAppTz } from '../utils/timezone';
-import { Sparkles, Calendar, Clock, User, Type, Link as LinkIcon, Loader2, Video } from 'lucide-react';
+import { Sparkles, Calendar, Clock, User, Mail, Type, Link as LinkIcon, Loader2, Video } from 'lucide-react';
 import { BookingFormData, CATEGORIES, Meeting } from '../types';
 import { generateMeetingAgenda } from '../services/geminiService';
 
@@ -17,6 +17,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ onSubmit, onCancel, editingMe
     title: '',
     description: '',
     host: '',
+    email: '',
     date: getTodayInAppTz(),
     startTime: '19:00',
     durationMinutes: 60,
@@ -31,6 +32,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ onSubmit, onCancel, editingMe
         title: editingMeeting.title,
         description: editingMeeting.description,
         host: editingMeeting.host,
+        email: editingMeeting.email ?? '',
         date: editingMeeting.date,
         startTime: editingMeeting.startTime,
         durationMinutes: editingMeeting.durationMinutes,
@@ -194,8 +196,8 @@ const BookingForm: React.FC<BookingFormProps> = ({ onSubmit, onCancel, editingMe
           </div>
         </div>
 
-        {/* Row 3: Host & Zoom Link */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Row 3: Host, Email & Zoom Link */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
            <div>
              <label className="block text-sm font-medium text-gray-700 mb-1">Host Name</label>
               <div className="relative">
@@ -214,8 +216,24 @@ const BookingForm: React.FC<BookingFormProps> = ({ onSubmit, onCancel, editingMe
               </div>
           </div>
            <div>
+             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:ring-jci-blue focus:border-jci-blue sm:text-sm border p-2"
+                  placeholder="e.g. host@example.com"
+                />
+              </div>
+          </div>
+           <div className="md:col-span-1">
              <label className="block text-sm font-medium text-gray-700 mb-1">
-                 Zoom Link <span className="text-gray-400 font-normal">(from Zoom, read-only)</span>
+                 Zoom Link <span className="text-gray-400 font-normal">(read-only)</span>
              </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
