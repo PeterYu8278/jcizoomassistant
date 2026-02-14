@@ -73,34 +73,26 @@ const App: React.FC = () => {
       if (editingMeetingId) {
         // Update existing meeting
         const existingMeeting = meetings.find(m => m.id === editingMeetingId);
-        let finalZoomLink = data.manualZoomLink;
-        
-        // If no manual link is provided, try to update via Zoom API
-        if (!finalZoomLink || finalZoomLink.trim() === '') {
-          // Check if meeting has a Zoom meeting ID stored
-          const zoomMeetingId = (existingMeeting as any)?.zoomMeetingId;
-          
-          if (zoomMeetingId) {
-            const zoomData = await updateZoomMeeting(
-              zoomMeetingId,
-              data.title,
-              new Date(`${data.date}T${data.startTime}`).toISOString(),
-              data.durationMinutes,
-              data.description
-            );
-            finalZoomLink = zoomData.joinUrl;
-          } else {
-            // Keep existing link if no Zoom meeting ID
-            finalZoomLink = existingMeeting?.zoomLink || '';
-          }
+        let finalZoomLink = data.manualZoomLink?.trim() || existingMeeting?.zoomLink || '';
+        const zoomMeetingId = (existingMeeting as Meeting & { zoomMeetingId?: string })?.zoomMeetingId;
+
+        // If meeting has zoomMeetingId, always update Zoom (form pre-fills zoomLink when editing, but we still need to push changes)
+        if (zoomMeetingId) {
+          const zoomData = await updateZoomMeeting(
+            zoomMeetingId,
+            data.title,
+            new Date(`${data.date}T${data.startTime}`).toISOString(),
+            data.durationMinutes,
+            data.description
+          );
+          finalZoomLink = zoomData.joinUrl;
         }
         
-        const existingZoomId = (existingMeeting as Meeting & { zoomMeetingId?: string })?.zoomMeetingId;
         const updatedMeeting: Meeting = {
           id: editingMeetingId,
           ...data,
           zoomLink: finalZoomLink,
-          ...(existingZoomId ? { zoomMeetingId: existingZoomId } : {}),
+          ...(zoomMeetingId ? { zoomMeetingId } : {}),
         };
         await updateMeeting(editingMeetingId, updatedMeeting);
         setEditingMeetingId(null);
