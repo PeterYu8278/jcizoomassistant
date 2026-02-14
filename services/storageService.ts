@@ -1,5 +1,6 @@
 import { Meeting } from '../types';
 import { listZoomMeetings, ZoomMeetingRaw } from './zoomService';
+import { parseAsAppTz, utcToAppTz } from '../utils/timezone';
 import { isSupabaseConfigured } from './supabaseClient';
 import {
   getMeetingsAsync as getFromSupabase,
@@ -12,10 +13,7 @@ import {
 const STORAGE_KEY = 'jci_meetings_data';
 
 const zoomToMeeting = (z: ZoomMeetingRaw): Meeting & { zoomMeetingId: string } => {
-  const start = new Date(z.start_time);
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  const date = `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`;
-  const startTime = `${pad(start.getHours())}:${pad(start.getMinutes())}`;
+  const { date, startTime } = utcToAppTz(z.start_time);
   return {
     id: `zoom-${z.id}`,
     title: z.topic || 'Untitled',
@@ -77,8 +75,8 @@ export const syncMeetingsFromZoom = async (): Promise<Meeting[]> => {
   }
 
   merged.sort((a, b) => {
-    const da = new Date(a.date + 'T' + a.startTime).getTime();
-    const db = new Date(b.date + 'T' + b.startTime).getTime();
+    const da = parseAsAppTz(a.date, a.startTime).getTime();
+    const db = parseAsAppTz(b.date, b.startTime).getTime();
     return da - db;
   });
 

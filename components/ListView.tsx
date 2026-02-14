@@ -1,5 +1,6 @@
 import React from 'react';
 import { Meeting } from '../types';
+import { parseAsAppTz } from '../utils/timezone';
 import MeetingCard from './MeetingCard';
 
 interface ListViewProps {
@@ -10,8 +11,8 @@ interface ListViewProps {
 
 const ListView: React.FC<ListViewProps> = ({ meetings, onDelete, onEdit }) => {
   const sorted = [...meetings].sort((a, b) => {
-    const da = new Date(a.date + 'T' + a.startTime).getTime();
-    const db = new Date(b.date + 'T' + b.startTime).getTime();
+    const da = parseAsAppTz(a.date, a.startTime).getTime();
+    const db = parseAsAppTz(b.date, b.startTime).getTime();
     return da - db;
   });
 

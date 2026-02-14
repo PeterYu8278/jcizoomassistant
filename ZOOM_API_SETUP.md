@@ -4,6 +4,8 @@
 
 Zoom meetings are created via **Netlify serverless functions** (backend proxy). Credentials stay on the server and are never exposed to the frontend. Uses **Server-to-Server OAuth** (JWT apps are deprecated by Zoom).
 
+**Timezone:** The app and Zoom both use **Asia/Kuala_Lumpur (UTC+8)**. All meeting times are interpreted and displayed in this timezone, independent of the user's system/browser timezone.
+
 ## Setup
 
 ### 1. Create Zoom Server-to-Server OAuth App

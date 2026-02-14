@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Meeting } from '../types';
+import { APP_TIMEZONE, getTodayInAppTz, nowInAppTz } from '../utils/timezone';
 import MeetingCard from './MeetingCard';
 
 interface CalendarViewProps {
@@ -17,7 +18,7 @@ const HOURS = Array.from({ length: TOTAL_HOURS }, (_, i) => i);
 const CELL_HEIGHT = 48; // Pixels per hour (24h × 48px = 1152px scrollable)
 
 const CalendarView: React.FC<CalendarViewProps> = ({ meetings, onDelete, onEdit }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(() => new Date(getTodayInAppTz() + 'T12:00:00+08:00'));
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
 
   // Helper to get start of week (Monday)
@@ -48,15 +49,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ meetings, onDelete, onEdit 
     setCurrentDate(d);
   };
   
-  const goToToday = () => setCurrentDate(new Date());
+  const goToToday = () => setCurrentDate(new Date(getTodayInAppTz() + 'T12:00:00+08:00'));
 
-  // Local date string YYYY-MM-DD (avoid UTC shift in toISOString)
-  const toLocalDateKey = (d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  };
+  const toLocalDateKey = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: APP_TIMEZONE });
 
   // Positioning logic for meeting blocks
   const getMeetingStyle = (meeting: Meeting) => {
@@ -115,7 +110,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ meetings, onDelete, onEdit 
                   const dateKey = toLocalDateKey(day);
                   // Filter meetings for this specific day
                   const dayMeetings = meetings.filter(m => m.date === dateKey);
-                  const isToday = toLocalDateKey(new Date()) === dateKey;
+                  const isToday = getTodayInAppTz() === dateKey;
 
                   return (
                       <div key={dateKey} className="relative bg-white group">
@@ -137,16 +132,19 @@ const CalendarView: React.FC<CalendarViewProps> = ({ meetings, onDelete, onEdit 
                             ))}
 
                             {/* Current Time Indicator (only for Today) */}
-                            {isToday && (
+                            {isToday && (() => {
+                                const { hours, minutes } = nowInAppTz();
+                                return (
                                 <div 
                                     className="absolute w-full border-t-2 border-red-400 z-0 pointer-events-none"
                                     style={{ 
-                                        top: `${((new Date().getHours() - START_HOUR) * CELL_HEIGHT) + ((new Date().getMinutes() / 60) * CELL_HEIGHT)}px` 
+                                        top: `${((hours - START_HOUR) * CELL_HEIGHT) + ((minutes / 60) * CELL_HEIGHT)}px` 
                                     }}
                                 >
                                     <div className="w-2 h-2 bg-red-400 rounded-full -mt-[5px] -ml-1"></div>
                                 </div>
-                            )}
+                                );
+                            })()}
 
                             {/* Render Meeting Blocks */}
                             {dayMeetings.map(meeting => (

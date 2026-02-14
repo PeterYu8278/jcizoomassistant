@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getTodayInAppTz, parseAsAppTz } from './utils/timezone';
 import Header from './components/Header';
 import CalendarView from './components/CalendarView';
 import ListView from './components/ListView';
@@ -153,12 +154,12 @@ const App: React.FC = () => {
 
   // Dashboard Stats
   const totalMeetings = meetings.length;
-  const upcomingToday = meetings.filter(m => m.date === new Date().toISOString().split('T')[0]).length;
+  const upcomingToday = meetings.filter(m => m.date === getTodayInAppTz()).length;
   
   // Get all upcoming meetings (sorted by date/time)
   const upcomingMeetings = meetings
-    .filter(m => new Date(m.date + 'T' + m.startTime) >= new Date())
-    .sort((a, b) => new Date(a.date + 'T' + a.startTime).getTime() - new Date(b.date + 'T' + b.startTime).getTime());
+    .filter(m => parseAsAppTz(m.date, m.startTime) >= new Date())
+    .sort((a, b) => parseAsAppTz(a.date, a.startTime).getTime() - parseAsAppTz(b.date, b.startTime).getTime());
 
   return (
     <div className="min-h-screen flex flex-col font-sans text-gray-800 bg-gray-50">

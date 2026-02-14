@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getTodayInAppTz } from '../utils/timezone';
 import { Sparkles, Calendar, Clock, User, Type, Link as LinkIcon, Loader2, Video } from 'lucide-react';
 import { BookingFormData, CATEGORIES, Meeting } from '../types';
 import { generateMeetingAgenda } from '../services/geminiService';
@@ -16,7 +17,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ onSubmit, onCancel, editingMe
     title: '',
     description: '',
     host: '',
-    date: new Date().toISOString().split('T')[0],
+    date: getTodayInAppTz(),
     startTime: '19:00',
     durationMinutes: 60,
     category: 'Project',
