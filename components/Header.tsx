@@ -1,22 +1,13 @@
 import React from 'react';
-import { Video, Calendar, PlusCircle, LayoutDashboard, HardDrive } from 'lucide-react';
+import { Video, Calendar, LayoutDashboard } from 'lucide-react';
 import { ViewState } from '../types';
 
 interface HeaderProps {
   currentView: ViewState;
   onChangeView: (view: ViewState) => void;
-  onBookNewMeeting?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentView, onChangeView, onBookNewMeeting }) => {
-  const navItemClass = (view: ViewState) => `
-    flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-200 font-medium
-    ${currentView === view 
-      ? 'bg-white text-jci-navy shadow-md' 
-      : 'text-white hover:bg-white/10'
-    }
-  `;
-
+const Header: React.FC<HeaderProps> = ({ currentView, onChangeView }) => {
   return (
     <header className="bg-gradient-to-r from-jci-navy to-jci-blue text-white shadow-lg sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -33,43 +24,26 @@ const Header: React.FC<HeaderProps> = ({ currentView, onChangeView, onBookNewMee
             </div>
           </div>
 
-          {/* Navigation */}
-          <nav className="hidden md:flex space-x-2">
-            <button 
+          {/* Toggle: Dashboard | Schedule */}
+          <div className="flex bg-white/20 rounded-lg p-1">
+            <button
               onClick={() => onChangeView(ViewState.DASHBOARD)}
-              className={navItemClass(ViewState.DASHBOARD)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                currentView === ViewState.DASHBOARD ? 'bg-white text-jci-navy shadow-sm' : 'text-white hover:bg-white/10'
+              }`}
             >
               <LayoutDashboard size={18} />
-              <span>Dashboard</span>
+              <span className="hidden sm:inline">Dashboard</span>
             </button>
-            <button 
+            <button
               onClick={() => onChangeView(ViewState.SCHEDULE)}
-              className={navItemClass(ViewState.SCHEDULE)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                currentView === ViewState.SCHEDULE ? 'bg-white text-jci-navy shadow-sm' : 'text-white hover:bg-white/10'
+              }`}
             >
               <Calendar size={18} />
-              <span>Schedule</span>
+              <span className="hidden sm:inline">Schedule</span>
             </button>
-            {/* <button 
-              onClick={() => onChangeView(ViewState.RECORDINGS)}
-              className={navItemClass(ViewState.RECORDINGS)}
-            >
-              <HardDrive size={18} />
-              <span>Recordings</span>
-            </button> */}
-            <button 
-              onClick={() => (onBookNewMeeting ?? (() => onChangeView(ViewState.BOOKING)))()}
-              className={navItemClass(ViewState.BOOKING)}
-            >
-              <PlusCircle size={18} />
-              <span>Book Meeting</span>
-            </button>
-          </nav>
-
-          {/* Mobile Menu Button */}
-          <div className="md:hidden">
-             <button onClick={() => onChangeView(ViewState.SCHEDULE)} className="p-2">
-                <Calendar />
-             </button>
           </div>
         </div>
       </div>

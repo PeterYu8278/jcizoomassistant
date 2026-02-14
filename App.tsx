@@ -9,7 +9,7 @@ import RecordingsPage from './components/RecordingsPage';
 import { ViewState, Meeting, BookingFormData } from './types';
 import { loadMeetings, saveMeeting, updateMeeting, deleteMeeting, syncMeetingsFromZoom } from './services/storageService';
 import { createZoomMeeting, updateZoomMeeting, deleteZoomMeeting as deleteZoomMeetingAPI } from './services/zoomService';
-import { Users, Video, CalendarCheck, RefreshCw, Calendar, List } from 'lucide-react';
+import { Video, CalendarCheck, RefreshCw, Calendar, List, PlusCircle } from 'lucide-react';
 
 // A visual separator / banner
 const HeroBanner = () => (
@@ -166,11 +166,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col font-sans text-gray-800 bg-gray-50">
-      <Header 
-        currentView={view} 
-        onChangeView={handleViewChange} 
-        onBookNewMeeting={() => { setEditingMeetingId(null); handleViewChange(ViewState.BOOKING); }} 
-      />
+      <Header currentView={view} onChangeView={handleViewChange} />
 
       <main className="flex-grow pb-12">
         {view === ViewState.DASHBOARD && (
@@ -178,7 +174,7 @@ const App: React.FC = () => {
             <HeroBanner />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20">
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="grid grid-cols-2 gap-6 mb-8">
                 <div className="bg-white p-6 rounded-xl shadow-md flex items-center space-x-4 border-l-4 border-jci-blue">
                   <div className="p-3 bg-blue-50 rounded-full text-jci-blue">
                     <CalendarCheck size={24} />
@@ -195,15 +191,6 @@ const App: React.FC = () => {
                   <div>
                     <p className="text-gray-500 text-sm">Today's Sessions</p>
                     <p className="text-2xl font-bold">{upcomingToday}</p>
-                  </div>
-                </div>
-                <div className="bg-white p-6 rounded-xl shadow-md flex items-center space-x-4 border-l-4 border-purple-500">
-                  <div className="p-3 bg-purple-50 rounded-full text-purple-600">
-                    <Users size={24} />
-                  </div>
-                  <div>
-                    <p className="text-gray-500 text-sm">Active Members</p>
-                    <p className="text-2xl font-bold">—</p>
                   </div>
                 </div>
               </div>
@@ -282,9 +269,6 @@ const App: React.FC = () => {
                     <RefreshCw size={18} className={isSyncing ? 'animate-spin' : ''} />
                     {isSyncing ? 'Syncing...' : 'Sync'}
                   </button>
-                  <button onClick={() => { setEditingMeetingId(null); setView(ViewState.BOOKING); }} className="bg-jci-blue text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors">
-                    + New Booking
-                  </button>
                 </div>
              </div>
              {scheduleView === 'calendar' ? (
@@ -313,6 +297,15 @@ const App: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Floating Book Meeting button */}
+      <button
+        onClick={() => { setEditingMeetingId(null); handleViewChange(ViewState.BOOKING); }}
+        className="fixed bottom-6 right-6 z-40 flex items-center justify-center w-14 h-14 bg-jci-blue hover:bg-blue-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
+        title="Book Meeting"
+      >
+        <PlusCircle size={28} />
+      </button>
     </div>
   );
 };
