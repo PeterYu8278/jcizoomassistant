@@ -22,7 +22,13 @@ const MeetingCard: React.FC<MeetingCardProps> = ({ meeting, onDelete, onEdit }) 
 
   const handleCopy = (e: React.MouseEvent) => {
     e.preventDefault();
-    navigator.clipboard.writeText(meeting.zoomLink);
+    const text = [
+      `会议主题 : ${meeting.title}`,
+      `日期 : ${meeting.date}`,
+      `时间 : ${meeting.startTime} (${meeting.durationMinutes} min)`,
+      `Zoom 链接 : ${meeting.zoomLink}`,
+    ].join('\n');
+    navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

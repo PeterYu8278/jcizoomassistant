@@ -129,7 +129,10 @@ export default async (req: Request, _context: Context) => {
       settings: {
         host_video: false,
         participant_video: false,
-        join_before_host: false,
+        join_before_host: true,
+        jbh_time: 5, // 5 = Allow participants to join 5 minutes before meeting start
+        waiting_room: false,
+        breakout_room: { enable: true },
         mute_upon_entry: true,
         approval_type: 2, // 2 = No registration required (0=Auto approve, 1=Manual approve)
         audio: "both", // both = Both内线和外线, phone_in_only = 仅内线, phone_out_only = 仅外线

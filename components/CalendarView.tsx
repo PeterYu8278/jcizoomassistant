@@ -4,24 +4,25 @@ import { Meeting } from '../types';
 import { APP_TIMEZONE, getTodayInAppTz, nowInAppTz } from '../utils/timezone';
 import MeetingCard from './MeetingCard';
 
+type CalendarMode = 'week' | 'month';
+
 interface CalendarViewProps {
   meetings: Meeting[];
   onDelete: (id: string) => void;
   onEdit?: (id: string) => void;
 }
 
-// Configuration for the calendar grid - full 24 hours
-const START_HOUR = 0;
-const END_HOUR = 24;
+const START_HOUR = 8;   // 早上8点
+const END_HOUR = 24;    // 晚上12点 (midnight)
 const TOTAL_HOURS = END_HOUR - START_HOUR;
-const HOURS = Array.from({ length: TOTAL_HOURS }, (_, i) => i);
+const HOURS = Array.from({ length: TOTAL_HOURS }, (_, i) => START_HOUR + i);
 const CELL_HEIGHT = 48; // Pixels per hour (24h × 48px = 1152px scrollable)
 
 const CalendarView: React.FC<CalendarViewProps> = ({ meetings, onDelete, onEdit }) => {
+  const [mode, setMode] = useState<CalendarMode>('week');
   const [currentDate, setCurrentDate] = useState(() => new Date(getTodayInAppTz() + 'T12:00:00+08:00'));
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
 
-  // Helper to get start of week (Monday)
   const getStartOfWeek = (d: Date) => {
     const date = new Date(d);
     const day = date.getDay();
@@ -36,19 +37,28 @@ const CalendarView: React.FC<CalendarViewProps> = ({ meetings, onDelete, onEdit 
     return d;
   });
 
-  // Navigation handlers
-  const nextWeek = () => {
+  const getStartOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
+  const startOfMonth = getStartOfMonth(currentDate);
+  const monthDays = (() => {
+    const start = new Date(startOfMonth);
+    const dayOfWeek = start.getDay();
+    const padStart = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const gridStart = new Date(start);
+    gridStart.setDate(gridStart.getDate() - padStart);
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(gridStart);
+      d.setDate(d.getDate() + i);
+      return d;
+    });
+  })();
+
+  const navigate = (delta: number) => {
     const d = new Date(currentDate);
-    d.setDate(d.getDate() + 7);
+    if (mode === 'week') d.setDate(d.getDate() + delta * 7);
+    else d.setMonth(d.getMonth() + delta);
     setCurrentDate(d);
   };
 
-  const prevWeek = () => {
-    const d = new Date(currentDate);
-    d.setDate(d.getDate() - 7);
-    setCurrentDate(d);
-  };
-  
   const goToToday = () => setCurrentDate(new Date(getTodayInAppTz() + 'T12:00:00+08:00'));
 
   const toLocalDateKey = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: APP_TIMEZONE });
@@ -78,96 +88,145 @@ const CalendarView: React.FC<CalendarViewProps> = ({ meetings, onDelete, onEdit 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col min-h-[600px] max-h-[900px] overflow-hidden">
       {/* Header Controls */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
-        <div className="flex items-center space-x-4">
-             <h2 className="text-xl font-bold text-gray-800">
-                {startOfWeek.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-            </h2>
-            <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
-                <button onClick={prevWeek} className="p-1.5 hover:bg-white rounded shadow-sm transition-all text-gray-600"><ChevronLeft size={18} /></button>
-                <button onClick={goToToday} className="px-3 py-1 text-sm font-semibold text-gray-700 hover:bg-white rounded shadow-sm transition-all">Today</button>
-                <button onClick={nextWeek} className="p-1.5 hover:bg-white rounded shadow-sm transition-all text-gray-600"><ChevronRight size={18} /></button>
-            </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border-b border-gray-200 flex-shrink-0">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-xl font-bold text-gray-800">
+            {startOfMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          </h2>
+          <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+            <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-white rounded shadow-sm transition-all text-gray-600"><ChevronLeft size={18} /></button>
+            <button onClick={goToToday} className="px-3 py-1 text-sm font-semibold text-gray-700 hover:bg-white rounded shadow-sm transition-all">Today</button>
+            <button onClick={() => navigate(1)} className="p-1.5 hover:bg-white rounded shadow-sm transition-all text-gray-600"><ChevronRight size={18} /></button>
+          </div>
         </div>
-        <div className="text-sm text-gray-500 hidden sm:block">
+        <div className="flex items-center gap-3">
+          <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+            {(['week', 'month'] as CalendarMode[]).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                className={`px-3 py-1.5 text-sm font-medium rounded capitalize transition-all ${mode === m ? 'bg-white shadow text-jci-navy' : 'text-gray-600 hover:text-gray-900'}`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+          <span className="text-sm text-gray-500 hidden sm:inline">
             {meetings.length} meeting{meetings.length !== 1 ? 's' : ''} total
+          </span>
         </div>
       </div>
 
       <div className="flex-grow overflow-y-auto overflow-x-auto flex relative">
-          {/* Time Sidebar */}
-          <div className="w-16 flex-none border-r border-gray-100 bg-gray-50 pt-10 sticky left-0 z-20">
+        {/* Week view: time-based grid */}
+        {mode === 'week' && (
+          <>
+            <div className="w-16 flex-none border-r border-gray-100 bg-gray-50 pt-10 sticky left-0 z-20">
               {HOURS.map(hour => (
-                  <div key={hour} className="text-right pr-2 text-xs text-gray-400 font-medium relative" style={{ height: CELL_HEIGHT }}>
-                       <span className="-top-2 relative">{hour}:00</span>
-                  </div>
+                <div key={hour} className="text-right pr-2 text-xs text-gray-400 font-medium relative" style={{ height: CELL_HEIGHT }}>
+                  <span className="-top-2 relative">{hour}:00</span>
+                </div>
               ))}
-          </div>
-
-          {/* Grid */}
-          <div className="flex-grow grid grid-cols-7 divide-x divide-gray-100 min-w-[800px]">
+            </div>
+            <div className="flex-grow grid grid-cols-7 divide-x divide-gray-100 min-w-[800px]">
               {weekDays.map((day) => {
-                  const dateKey = toLocalDateKey(day);
-                  // Filter meetings for this specific day
-                  const dayMeetings = meetings.filter(m => m.date === dateKey);
-                  const isToday = getTodayInAppTz() === dateKey;
-
-                  return (
-                      <div key={dateKey} className="relative bg-white group">
-                          {/* Day Column Header */}
-                          <div className={`text-center py-3 border-b border-gray-100 sticky top-0 z-10 ${isToday ? 'bg-blue-50/90 backdrop-blur' : 'bg-white/95 backdrop-blur'}`}>
-                              <div className={`text-xs font-bold tracking-wider mb-1 ${isToday ? 'text-jci-blue' : 'text-gray-400'}`}>
-                                  {day.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
-                              </div>
-                              <div className={`text-xl font-bold w-9 h-9 rounded-full flex items-center justify-center mx-auto transition-colors ${isToday ? 'bg-jci-blue text-white shadow-md' : 'text-gray-700 group-hover:bg-gray-100'}`}>
-                                  {day.getDate()}
-                              </div>
-                          </div>
-
-                          {/* Grid Lines & Events Container */}
-                          <div className="relative">
-                            {/* Horizontal grid lines for hours */}
-                            {HOURS.map(hour => (
-                                <div key={hour} className="border-b border-gray-50" style={{ height: CELL_HEIGHT }}></div>
-                            ))}
-
-                            {/* Current Time Indicator (only for Today) */}
-                            {isToday && (() => {
-                                const { hours, minutes } = nowInAppTz();
-                                return (
-                                <div 
-                                    className="absolute w-full border-t-2 border-red-400 z-0 pointer-events-none"
-                                    style={{ 
-                                        top: `${((hours - START_HOUR) * CELL_HEIGHT) + ((minutes / 60) * CELL_HEIGHT)}px` 
-                                    }}
-                                >
-                                    <div className="w-2 h-2 bg-red-400 rounded-full -mt-[5px] -ml-1"></div>
-                                </div>
-                                );
-                            })()}
-
-                            {/* Render Meeting Blocks */}
-                            {dayMeetings.map(meeting => (
-                                <div
-                                    key={meeting.id}
-                                    onClick={() => setSelectedMeeting(meeting)}
-                                    className={`absolute left-1 right-1 rounded-md px-2 py-1.5 text-xs cursor-pointer shadow-sm border overflow-hidden z-1 transition-all ${getCategoryColor(meeting.category)}`}
-                                    style={getMeetingStyle(meeting)}
-                                    title={`${meeting.title} (${meeting.startTime})`}
-                                >
-                                    <div className="font-bold truncate leading-tight">{meeting.title}</div>
-                                    <div className="opacity-80 mt-0.5 font-medium flex items-center gap-1">
-                                        <span>{meeting.startTime}</span>
-                                        <span>•</span>
-                                        <span>{meeting.durationMinutes}m</span>
-                                    </div>
-                                </div>
-                            ))}
-                          </div>
+                const dateKey = toLocalDateKey(day);
+                const dayMeetings = meetings.filter(m => m.date === dateKey);
+                const isToday = getTodayInAppTz() === dateKey;
+                return (
+                  <div key={dateKey} className="relative bg-white group">
+                    <div className={`text-center py-3 border-b border-gray-100 sticky top-0 z-10 ${isToday ? 'bg-blue-50/90 backdrop-blur' : 'bg-white/95 backdrop-blur'}`}>
+                      <div className={`text-xs font-bold tracking-wider mb-1 ${isToday ? 'text-jci-blue' : 'text-gray-400'}`}>
+                        {day.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
                       </div>
-                  );
+                      <div className={`text-xl font-bold w-9 h-9 rounded-full flex items-center justify-center mx-auto transition-colors ${isToday ? 'bg-jci-blue text-white shadow-md' : 'text-gray-700 group-hover:bg-gray-100'}`}>
+                        {day.getDate()}
+                      </div>
+                    </div>
+                    <div className="relative">
+                      {HOURS.map(hour => (
+                        <div key={hour} className="border-b border-gray-50" style={{ height: CELL_HEIGHT }}></div>
+                      ))}
+                      {isToday && (() => {
+                        const { hours, minutes } = nowInAppTz();
+                        return (
+                          <div
+                            className="absolute w-full border-t-2 border-red-400 z-0 pointer-events-none"
+                            style={{ top: `${((hours - START_HOUR) * CELL_HEIGHT) + ((minutes / 60) * CELL_HEIGHT)}px` }}
+                          >
+                            <div className="w-2 h-2 bg-red-400 rounded-full -mt-[5px] -ml-1"></div>
+                          </div>
+                        );
+                      })()}
+                      {dayMeetings.map(meeting => (
+                        <div
+                          key={meeting.id}
+                          onClick={() => setSelectedMeeting(meeting)}
+                          className={`absolute left-1 right-1 rounded-md px-2 py-1.5 text-xs cursor-pointer shadow-sm border overflow-hidden z-1 transition-all ${getCategoryColor(meeting.category)}`}
+                          style={getMeetingStyle(meeting)}
+                          title={`${meeting.title} (${meeting.startTime})`}
+                        >
+                          <div className="font-bold truncate leading-tight">{meeting.title}</div>
+                          <div className="opacity-80 mt-0.5 font-medium flex items-center gap-1">
+                            <span>{meeting.startTime}</span>
+                            <span>•</span>
+                            <span>{meeting.durationMinutes}m</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
               })}
+            </div>
+          </>
+        )}
+
+        {/* Month view */}
+        {mode === 'month' && (
+          <div className="flex-grow flex flex-col min-w-[600px]">
+            {/* Weekday headers */}
+            <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
+                <div key={d} className="text-center py-2 text-xs font-bold text-gray-500 uppercase">{d}</div>
+              ))}
+            </div>
+            {/* Date grid */}
+            <div className="flex-grow grid grid-cols-7 auto-rows-fr min-h-[400px]">
+              {monthDays.map((day) => {
+                const dateKey = toLocalDateKey(day);
+                const dayMeetings = meetings.filter(m => m.date === dateKey);
+                const isToday = getTodayInAppTz() === dateKey;
+                const isCurrentMonth = day.getMonth() === startOfMonth.getMonth();
+                return (
+                  <div
+                    key={dateKey}
+                    className={`border-b border-r border-gray-100 p-2 overflow-hidden ${!isCurrentMonth ? 'bg-gray-50' : 'bg-white'} min-h-[80px]`}
+                  >
+                    <div className={`text-sm font-semibold mb-1 ${isToday ? 'w-7 h-7 rounded-full bg-jci-blue text-white flex items-center justify-center' : 'text-gray-700'} ${!isCurrentMonth ? 'text-gray-400' : ''}`}>
+                      {day.getDate()}
+                    </div>
+                    <div className="space-y-1 overflow-y-auto max-h-[120px]">
+                      {dayMeetings.slice(0, 3).map(meeting => (
+                        <div
+                          key={meeting.id}
+                          onClick={() => setSelectedMeeting(meeting)}
+                          className={`text-xs px-1.5 py-0.5 rounded cursor-pointer truncate ${getCategoryColor(meeting.category)}`}
+                          title={`${meeting.title} ${meeting.startTime}`}
+                        >
+                          {meeting.startTime} {meeting.title}
+                        </div>
+                      ))}
+                      {dayMeetings.length > 3 && (
+                        <div className="text-xs text-gray-500 pl-1">+{dayMeetings.length - 3} more</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
+        )}
       </div>
 
       {/* Detail Modal */}
