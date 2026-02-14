@@ -99,32 +99,19 @@ const App: React.FC = () => {
         await refreshMeetings();
         setView(ViewState.SCHEDULE);
       } else {
-        // Create new meeting
-        let finalZoomLink = data.manualZoomLink;
-        let zoomMeetingId: string | undefined;
-        
-        // If no manual link is provided, create via Zoom API
-        if (!finalZoomLink || finalZoomLink.trim() === '') {
-          try {
-            const zoomData = await createZoomMeeting(
-              data.title,
-              new Date(`${data.date}T${data.startTime}`).toISOString(),
-              data.durationMinutes,
-              data.description
-            );
-            finalZoomLink = zoomData.joinUrl;
-            zoomMeetingId = zoomData.meetingId;
-          } catch (error) {
-            console.error('Failed to create Zoom meeting:', error);
-            throw error;
-          }
-        }
+        // Create new meeting - Zoom link only from Zoom API
+        const zoomData = await createZoomMeeting(
+          data.title,
+          new Date(`${data.date}T${data.startTime}`).toISOString(),
+          data.durationMinutes,
+          data.description
+        );
 
         const newMeeting: Meeting & { zoomMeetingId?: string } = {
           id: Date.now().toString(),
           ...data,
-          zoomLink: finalZoomLink,
-          zoomMeetingId
+          zoomLink: zoomData.joinUrl,
+          zoomMeetingId: zoomData.meetingId,
         };
         await saveMeeting(newMeeting);
         await refreshMeetings();

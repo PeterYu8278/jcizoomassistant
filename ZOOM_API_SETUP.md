@@ -24,6 +24,8 @@ In **Netlify Dashboard** → **Site** → **Environment variables**, add:
 | `VITE_ZOOM_CLIENT_ID` | Your Zoom Client ID | All |
 | `VITE_ZOOM_CLIENT_SECRET` | Your Zoom Client Secret | All |
 | `VITE_USE_ZOOM_API` | `true` | All |
+| `VITE_ZOOM_TIMEZONE` | `Asia/Singapore` (optional) | All |
+| `VITE_ZOOM_REGISTRATION_TYPE` | `0` = no registration, `1` = per occurrence, `2` = once for multiple (optional) | All |
 
 ### 3. Local Development
 

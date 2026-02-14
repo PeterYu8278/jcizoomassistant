@@ -100,13 +100,15 @@ export default async (req: Request, _context: Context) => {
   }
 
   const zoomStartTime = new Date(startTime).toISOString();
+  const timezone = getEnv("VITE_ZOOM_TIMEZONE") || "Asia/Singapore";
+  const registrationType = parseInt(getEnv("VITE_ZOOM_REGISTRATION_TYPE") || "0", 10);
 
   const meetingRequest = {
     topic,
     type: 2,
     start_time: zoomStartTime,
     duration: durationMinutes,
-    timezone: "UTC",
+    timezone,
     password: password || undefined,
     agenda: agenda || undefined,
     settings: {
@@ -117,6 +119,7 @@ export default async (req: Request, _context: Context) => {
       approval_type: 0,
       audio: "both",
       auto_recording: "none",
+      registration_type: registrationType,
     },
   };
 
