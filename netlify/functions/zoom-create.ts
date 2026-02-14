@@ -109,7 +109,7 @@ export default async (req: Request, _context: Context) => {
 
     const meetingRequest = {
       topic,
-      type: 0,
+      type: 2, // 2 = Scheduled meeting (1=Instant, 3=Recurring no fixed, 8=Recurring fixed)
       start_time: zoomStartTime,
       duration: durationMinutes,
       timezone,
