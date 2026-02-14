@@ -45,33 +45,40 @@ const RecordingsPage: React.FC = () => {
   const [nextPageToken, setNextPageToken] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const loadRecordings = useCallback(async (pageToken?: string) => {
+  const loadRecordings = useCallback(async (pageToken?: string, isLoadMore = false) => {
     if (!isZoomApiConfigured()) {
       setError('Zoom API is not configured. Set VITE_USE_ZOOM_API=true.');
       return;
     }
-    setLoading(true);
+    if (!isLoadMore) setLoading(true);
     setError(null);
+    const today = getTodayInAppTz();
+    const defaultTo = today;
+    const defaultFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const params = { from: from || defaultFrom, to: to || defaultTo, pageSize: 300, nextPageToken: pageToken };
+    let allMeetings: { topic: string; start_time: string; duration: number; recording_files: ZoomRecordingFile[] }[] = [];
+    let total = 0;
+    let nextToken = pageToken;
     try {
-      const today = getTodayInAppTz();
-      const defaultTo = today;
-      const defaultFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-      const res = await getAccountRecordings({
-        from: from || defaultFrom,
-        to: to || defaultTo,
-        pageSize: 50,
-        nextPageToken: pageToken,
-      });
-      if (pageToken) {
-        setMeetings((prev) => [...prev, ...res.meetings]);
-      } else {
-        setMeetings(res.meetings);
-      }
-      setTotalRecords(res.totalRecords);
-      setNextPageToken(res.nextPageToken || '');
+      do {
+        const res = await getAccountRecordings({
+          ...params,
+          from: params.from,
+          to: params.to,
+          pageSize: 300,
+          nextPageToken: nextToken,
+        });
+        allMeetings = nextToken ? [...allMeetings, ...res.meetings] : res.meetings;
+        total = res.totalRecords;
+        nextToken = res.nextPageToken || '';
+        params.nextPageToken = nextToken;
+        setMeetings(nextToken ? [...allMeetings] : allMeetings);
+        setTotalRecords(total);
+        setNextPageToken(nextToken);
+      } while (nextToken);
     } catch (e) {
       setError((e as Error)?.message || 'Failed to load recordings');
-      setMeetings([]);
+      if (!isLoadMore) setMeetings([]);
     } finally {
       setLoading(false);
     }
@@ -141,7 +148,7 @@ const RecordingsPage: React.FC = () => {
             {loading ? 'Loading...' : 'Search'}
           </button>
         </div>
-        <p className="text-xs text-gray-500 mt-2">Date range is in UTC. Max 1 month per request.</p>
+        <p className="text-xs text-gray-500 mt-2">Date range is in UTC. Zoom API allows max 1 month per query. For older recordings, select a different month and click Search.</p>
       </div>
 
       {error && (
@@ -162,7 +169,7 @@ const RecordingsPage: React.FC = () => {
       ) : (
         <>
           <p className="text-sm text-gray-600 mb-4">
-            {totalRecords} recording(s) found
+            {meetings.length} meeting(s) with recordings
           </p>
           <div className="space-y-3">
             {meetings.map((m) => {

@@ -112,7 +112,7 @@ export default async (req: Request) => {
   const url = new URL(req.url);
   const fromParam = url.searchParams.get("from");
   const toParam = url.searchParams.get("to");
-  const pageSize = Math.min(Math.max(Number(url.searchParams.get("page_size")) || 30, 1), 300);
+  const pageSize = Math.min(Math.max(Number(url.searchParams.get("page_size")) || 300, 1), 300);
   const nextPageToken = url.searchParams.get("next_page_token") || "";
 
   // Zoom requires from/to with max 1 month range (UTC dates)
