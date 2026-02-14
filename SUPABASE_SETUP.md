@@ -42,6 +42,13 @@ create policy "Allow anon all" on public.meetings
 create index if not exists idx_meetings_zoom_id on public.meetings(zoom_meeting_id);
 ```
 
+Add `email` and `zoom_password` columns (migration 002):
+
+```sql
+alter table public.meetings add column if not exists email text default '';
+alter table public.meetings add column if not exists zoom_password text default '';
+```
+
 ### 3. Configure Environment
 
 Add to `.env.local` and Netlify:

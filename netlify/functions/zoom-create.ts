@@ -117,13 +117,14 @@ export default async (req: Request, _context: Context) => {
     const timezone = getEnv("VITE_ZOOM_TIMEZONE") || "Asia/Kuala_Lumpur";
     const registrationType = parseInt(getEnv("VITE_ZOOM_REGISTRATION_TYPE") || "0", 10);
 
+    const passcode = password?.trim() || String(Math.floor(100000 + Math.random() * 900000));
     const meetingRequest = {
       topic,
       type: 2, // 2 = Scheduled meeting (1=Instant, 3=Recurring no fixed, 8=Recurring fixed)
       start_time: zoomStartTime,
       duration: durationMinutes,
       timezone,
-      password: password || undefined,
+      password: passcode,
       agenda: agenda || undefined,
       settings: {
         host_video: false,
@@ -160,7 +161,7 @@ export default async (req: Request, _context: Context) => {
         joinUrl: data.join_url,
         startUrl: data.start_url ?? data.join_url,
         meetingId: String(data.id ?? ""),
-        password: data.password,
+        password: data.password ?? passcode,
       },
       200
     );

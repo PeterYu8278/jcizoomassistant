@@ -94,6 +94,7 @@ const App: React.FC = () => {
           id: editingMeetingId,
           ...data,
           zoomLink: finalZoomLink,
+          zoomPassword: existingMeeting?.zoomPassword,
           ...(zoomMeetingId ? { zoomMeetingId } : {}),
         };
         await updateMeeting(editingMeetingId, updatedMeeting);
