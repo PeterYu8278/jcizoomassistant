@@ -49,13 +49,13 @@ const Header: React.FC<HeaderProps> = ({ currentView, onChangeView, onBookNewMee
               <Calendar size={18} />
               <span>Schedule</span>
             </button>
-            <button 
+            {/* <button 
               onClick={() => onChangeView(ViewState.RECORDINGS)}
               className={navItemClass(ViewState.RECORDINGS)}
             >
               <HardDrive size={18} />
               <span>Recordings</span>
-            </button>
+            </button> */}
             <button 
               onClick={() => (onBookNewMeeting ?? (() => onChangeView(ViewState.BOOKING)))()}
               className={navItemClass(ViewState.BOOKING)}

@@ -183,7 +183,7 @@ const MeetingCard: React.FC<MeetingCardProps> = ({ meeting, onDelete, onEdit }) 
           >
             {copied ? <Check size={18} className="text-green-600" /> : <Copy size={18} />}
           </button>
-          {canShowRecordings && (
+          {/* {canShowRecordings && (
             <button
               onClick={handleOpenRecordings}
               className="flex-shrink-0 p-2 text-gray-500 hover:text-jci-navy hover:bg-blue-50 rounded-lg transition-colors border border-gray-200 bg-white"
@@ -191,14 +191,15 @@ const MeetingCard: React.FC<MeetingCardProps> = ({ meeting, onDelete, onEdit }) 
             >
               <HardDrive size={18} />
             </button>
-          )}
-           <button
+          )} */}
+           {/* <button
             onClick={() => setShowAgenda(true)}
             className="flex-shrink-0 p-2 text-gray-500 hover:text-jci-navy hover:bg-blue-50 rounded-lg transition-colors border border-gray-200 bg-white"
             title="View Agenda"
           >
              <FileText size={18} />
           </button>
+          */}
         </div>
       </div>
 
