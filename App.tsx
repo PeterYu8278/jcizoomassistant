@@ -81,7 +81,8 @@ const App: React.FC = () => {
           const zoomData = await updateZoomMeeting(
             zoomMeetingId,
             data.title,
-            new Date(`${data.date}T${data.startTime}`).toISOString(),
+            data.date,
+            data.startTime,
             data.durationMinutes,
             data.description
           );
@@ -102,7 +103,8 @@ const App: React.FC = () => {
         // Create new meeting - Zoom link only from Zoom API
         const zoomData = await createZoomMeeting(
           data.title,
-          new Date(`${data.date}T${data.startTime}`).toISOString(),
+          data.date,
+          data.startTime,
           data.durationMinutes,
           data.description
         );

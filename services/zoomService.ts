@@ -12,6 +12,7 @@ const getApiBase = (): string => '';
 
 export const createZoomMeeting = async (
   topic: string,
+  date: string,
   startTime: string,
   durationMinutes: number,
   agenda?: string,
@@ -27,6 +28,7 @@ export const createZoomMeeting = async (
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       topic,
+      date,
       startTime,
       durationMinutes,
       agenda,
@@ -45,6 +47,7 @@ export const createZoomMeeting = async (
 export const updateZoomMeeting = async (
   meetingId: string,
   topic: string,
+  date: string,
   startTime: string,
   durationMinutes: number,
   agenda?: string
@@ -59,6 +62,7 @@ export const updateZoomMeeting = async (
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       topic,
+      date,
       startTime,
       durationMinutes,
       agenda,

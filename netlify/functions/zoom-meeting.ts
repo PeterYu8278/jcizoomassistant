@@ -4,9 +4,17 @@ import crypto from "crypto";
 interface UpdateMeetingBody {
   topic: string;
   startTime: string;
+  date?: string;
   durationMinutes: number;
   agenda?: string;
 }
+
+const TZ_OFFSET = "+08:00";
+
+const toUtcIso = (date: string, startTime: string): string => {
+  const normalized = startTime.includes(":") && startTime.length <= 5 ? `${startTime}:00` : startTime.slice(0, 8);
+  return new Date(`${date}T${normalized}${TZ_OFFSET}`).toISOString();
+};
 
 const getEnv = (k: string) => process.env[k] ?? (globalThis as any).Netlify?.env?.get?.(k);
 
@@ -104,8 +112,11 @@ export default async (req: Request, context: Context) => {
       });
     }
 
-    const { topic, startTime, durationMinutes, agenda } = body;
-    const zoomStartTime = new Date(startTime).toISOString();
+    const { topic, startTime, date, durationMinutes, agenda } = body;
+    const zoomStartTime =
+      date && /^\d{4}-\d{2}-\d{2}$/.test(date) && /^\d{1,2}:\d{2}$/.test(startTime.trim())
+        ? toUtcIso(date, startTime.trim())
+        : new Date(startTime).toISOString();
 
     const meetingRequest = {
       topic,

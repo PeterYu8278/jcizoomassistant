@@ -3,11 +3,20 @@ import crypto from "crypto";
 
 interface CreateMeetingBody {
   topic: string;
-  startTime: string;
+  startTime: string; // ISO string or used with date for local time
+  date?: string; // YYYY-MM-DD, when provided startTime is HH:mm in Asia/Kuala_Lumpur
   durationMinutes: number;
   agenda?: string;
   password?: string;
 }
+
+const TZ_OFFSET = "+08:00"; // Asia/Kuala_Lumpur = UTC+8
+
+/** Convert date (YYYY-MM-DD) + startTime (HH:mm) in app timezone to UTC ISO */
+const toUtcIso = (date: string, startTime: string): string => {
+  const normalized = startTime.includes(":") && startTime.length <= 5 ? `${startTime}:00` : startTime.slice(0, 8);
+  return new Date(`${date}T${normalized}${TZ_OFFSET}`).toISOString();
+};
 
 const getEnv = (k: string): string | undefined =>
   process.env[k] ?? (typeof (globalThis as any).Netlify?.env?.get === "function" ? (globalThis as any).Netlify.env.get(k) : undefined);
@@ -98,12 +107,15 @@ export default async (req: Request, _context: Context) => {
       return jsonResponse({ error: "Invalid JSON body" }, 400);
     }
 
-    const { topic, startTime, durationMinutes, agenda, password } = body;
+    const { topic, startTime, date, durationMinutes, agenda, password } = body;
     if (!topic || !startTime || !durationMinutes) {
       return jsonResponse({ error: "Missing required fields: topic, startTime, durationMinutes" }, 400);
     }
 
-    const zoomStartTime = new Date(startTime).toISOString();
+    const zoomStartTime =
+      date && /^\d{4}-\d{2}-\d{2}$/.test(date) && /^\d{1,2}:\d{2}$/.test(startTime.trim())
+        ? toUtcIso(date, startTime.trim())
+        : new Date(startTime).toISOString();
     const timezone = getEnv("VITE_ZOOM_TIMEZONE") || "Asia/Kuala_Lumpur";
     const registrationType = parseInt(getEnv("VITE_ZOOM_REGISTRATION_TYPE") || "0", 10);
 
@@ -116,14 +128,14 @@ export default async (req: Request, _context: Context) => {
       password: password || undefined,
       agenda: agenda || undefined,
       settings: {
-        host_video: true,
-        participant_video: true,
+        host_video: false,
+        participant_video: false,
         join_before_host: false,
-        mute_upon_entry: false,
-        approval_type: 0,
-        audio: "both",
-        auto_recording: "none",
-        registration_type: registrationType,
+        mute_upon_entry: true,
+        approval_type: 2, // 2 = No registration required (0=Auto approve, 1=Manual approve)
+        audio: "both", // both = Both内线和外线, phone_in_only = 仅内线, phone_out_only = 仅外线
+        auto_recording: "none", // none = 不自动录制, local = 本地录制, cloud = 云端录制
+        registration_type: registrationType, // 0 = No registration, 1 = Per occurrence, 2 = Once for multiple
       },
     };
 
