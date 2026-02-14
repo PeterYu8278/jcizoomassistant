@@ -100,7 +100,7 @@ export default async (req: Request, _context: Context) => {
   }
 
   const zoomStartTime = new Date(startTime).toISOString();
-  const timezone = getEnv("VITE_ZOOM_TIMEZONE") || "Asia/Kuala Lumpur";
+  const timezone = getEnv("VITE_ZOOM_TIMEZONE") || "Asia/Kuala_Lumpur";
   const registrationType = parseInt(getEnv("VITE_ZOOM_REGISTRATION_TYPE") || "0", 10);
 
   const meetingRequest = {
