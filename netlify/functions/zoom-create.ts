@@ -9,7 +9,18 @@ interface CreateMeetingBody {
   password?: string;
 }
 
-const getEnv = (k: string) => process.env[k] ?? (globalThis as any).Netlify?.env?.get?.(k);
+const getEnv = (k: string): string | undefined =>
+  process.env[k] ?? (typeof (globalThis as any).Netlify?.env?.get === "function" ? (globalThis as any).Netlify.env.get(k) : undefined);
+
+const safeJson = async (res: Response): Promise<unknown> => {
+  const text = await res.text();
+  if (!text?.trim()) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text.slice(0, 200) };
+  }
+};
 
 const getZoomTokenS2S = async (accountId: string, clientId: string, clientSecret: string): Promise<string> => {
   const creds = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
@@ -22,10 +33,11 @@ const getZoomTokenS2S = async (accountId: string, clientId: string, clientSecret
     body: new URLSearchParams({ grant_type: "account_credentials", account_id: accountId }),
   });
   if (!res.ok) {
-    const err = await res.json();
+    const err = (await safeJson(res)) as { error_description?: string; error?: string };
     throw new Error(err.error_description || err.error || "Failed to get Zoom token");
   }
-  const data = await res.json();
+  const data = (await safeJson(res)) as { access_token?: string };
+  if (!data.access_token) throw new Error("No access_token in Zoom OAuth response");
   return data.access_token;
 };
 
@@ -54,102 +66,97 @@ const generateZoomJWT = (apiKey: string, apiSecret: string): string => {
   return `${encodedHeader}.${encodedPayload}.${signature}`;
 };
 
+const jsonResponse = (body: object, status: number) =>
+  new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+
 export default async (req: Request, _context: Context) => {
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  let token: string;
   try {
-    const accountId = getEnv("VITE_ZOOM_ACCOUNT_ID");
-    const clientId = getEnv("VITE_ZOOM_CLIENT_ID") || getEnv("VITE_ZOOM_API_KEY");
-    const clientSecret = getEnv("VITE_ZOOM_CLIENT_SECRET") || getEnv("VITE_ZOOM_API_SECRET");
-    if (accountId && clientId && clientSecret) {
-      token = await getZoomTokenS2S(accountId, clientId, clientSecret);
-    } else if (clientId && clientSecret) {
-      token = generateZoomJWT(clientId, clientSecret);
-    } else {
-      throw new Error("Set VITE_ZOOM_ACCOUNT_ID, VITE_ZOOM_CLIENT_ID, VITE_ZOOM_CLIENT_SECRET (S2S OAuth) in Netlify env.");
+    if (req.method !== "POST") {
+      return jsonResponse({ error: "Method not allowed" }, 405);
     }
-  } catch (e: any) {
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
+
+    let token: string;
+    try {
+      const accountId = getEnv("VITE_ZOOM_ACCOUNT_ID");
+      const clientId = getEnv("VITE_ZOOM_CLIENT_ID") || getEnv("VITE_ZOOM_API_KEY");
+      const clientSecret = getEnv("VITE_ZOOM_CLIENT_SECRET") || getEnv("VITE_ZOOM_API_SECRET");
+      if (accountId && clientId && clientSecret) {
+        token = await getZoomTokenS2S(accountId, clientId, clientSecret);
+      } else if (clientId && clientSecret) {
+        token = generateZoomJWT(clientId, clientSecret);
+      } else {
+        throw new Error("Set VITE_ZOOM_ACCOUNT_ID, VITE_ZOOM_CLIENT_ID, VITE_ZOOM_CLIENT_SECRET (S2S OAuth) in Netlify env.");
+      }
+    } catch (e: unknown) {
+      return jsonResponse({ error: (e as Error)?.message || "Zoom auth failed" }, 500);
+    }
+
+    let body: CreateMeetingBody;
+    try {
+      body = await req.json();
+    } catch {
+      return jsonResponse({ error: "Invalid JSON body" }, 400);
+    }
+
+    const { topic, startTime, durationMinutes, agenda, password } = body;
+    if (!topic || !startTime || !durationMinutes) {
+      return jsonResponse({ error: "Missing required fields: topic, startTime, durationMinutes" }, 400);
+    }
+
+    const zoomStartTime = new Date(startTime).toISOString();
+    const timezone = getEnv("VITE_ZOOM_TIMEZONE") || "Asia/Kuala_Lumpur";
+    const registrationType = parseInt(getEnv("VITE_ZOOM_REGISTRATION_TYPE") || "0", 10);
+
+    const meetingRequest = {
+      topic,
+      type: 0,
+      start_time: zoomStartTime,
+      duration: durationMinutes,
+      timezone,
+      password: password || undefined,
+      agenda: agenda || undefined,
+      settings: {
+        host_video: true,
+        participant_video: true,
+        join_before_host: false,
+        mute_upon_entry: false,
+        approval_type: 0,
+        audio: "both",
+        auto_recording: "none",
+        registration_type: registrationType,
+      },
+    };
+
+    const zoomRes = await fetch("https://api.zoom.us/v2/users/me/meetings", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(meetingRequest),
     });
-  }
 
-  let body: CreateMeetingBody;
-  try {
-    body = await req.json();
-  } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+    if (!zoomRes.ok) {
+      const errData = (await safeJson(zoomRes)) as { message?: string };
+      return jsonResponse({ error: errData.message || zoomRes.statusText }, zoomRes.status);
+    }
 
-  const { topic, startTime, durationMinutes, agenda, password } = body;
-  if (!topic || !startTime || !durationMinutes) {
-    return new Response(
-      JSON.stringify({ error: "Missing required fields: topic, startTime, durationMinutes" }),
-      { status: 400, headers: { "Content-Type": "application/json" } }
+    const data = (await safeJson(zoomRes)) as { join_url?: string; start_url?: string; id?: number; password?: string };
+    if (!data.join_url) {
+      return jsonResponse({ error: "Zoom API did not return join_url" }, 502);
+    }
+    return jsonResponse(
+      {
+        joinUrl: data.join_url,
+        startUrl: data.start_url ?? data.join_url,
+        meetingId: String(data.id ?? ""),
+        password: data.password,
+      },
+      200
     );
+  } catch (e: unknown) {
+    return jsonResponse({ error: (e as Error)?.message || "Internal server error" }, 500);
   }
-
-  const zoomStartTime = new Date(startTime).toISOString();
-  const timezone = getEnv("VITE_ZOOM_TIMEZONE") || "Asia/Kuala_Lumpur";
-  const registrationType = parseInt(getEnv("VITE_ZOOM_REGISTRATION_TYPE") || "0", 10);
-
-  const meetingRequest = {
-    topic,
-    type: 0,
-    start_time: zoomStartTime,
-    duration: durationMinutes,
-    timezone,
-    password: password || undefined,
-    agenda: agenda || undefined,
-    settings: {
-      host_video: true,
-      participant_video: true,
-      join_before_host: false,
-      mute_upon_entry: false,
-      approval_type: 0,
-      audio: "both",
-      auto_recording: "none",
-      registration_type: registrationType,
-    },
-  };
-
-  const zoomRes = await fetch("https://api.zoom.us/v2/users/me/meetings", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(meetingRequest),
-  });
-
-  if (!zoomRes.ok) {
-    const errData = await zoomRes.json();
-    return new Response(
-      JSON.stringify({ error: errData.message || zoomRes.statusText }),
-      { status: zoomRes.status, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
-  const data = await zoomRes.json();
-  return new Response(
-    JSON.stringify({
-      joinUrl: data.join_url,
-      startUrl: data.start_url,
-      meetingId: String(data.id),
-      password: data.password,
-    }),
-    { status: 200, headers: { "Content-Type": "application/json" } }
-  );
 };
 
 export const config: Config = {
